@@ -15,41 +15,56 @@ impl VertexBufferBinding {
 
 pub struct VertexArray {
     gl_handle: IntHandle,
-    vertex_buffers: Vec<VertexBufferBinding>,
+    vertex_buffer_bindings: Vec<VertexBufferBinding>,
     index_buffer: Buffer<GLuint>,
 }
 
 impl VertexArray {
     pub fn new(
-        vertex_buffers: impl IntoIterator<Item = VertexBufferBinding>,
+        vertex_buffer_bindings: impl IntoIterator<Item = VertexBufferBinding>,
         index_buffer: Buffer<GLuint>,
     ) -> Self {
-        let vertex_buffers = vertex_buffers
+        // Collect vertex buffers into a vector
+        let vertex_buffer_bindings = vertex_buffer_bindings
             .into_iter()
             .collect::<Vec<VertexBufferBinding>>();
+
         // We will receive the vertex array's handle in gl_handle
         let mut gl_handle: IntHandle = 0;
         unsafe {
             // Create vertex array
             gl::CreateVertexArrays(1, &mut gl_handle);
-            for (binding_idx, buffer) in vertex_buffers.iter().enumerate() {
+
+            // Bind vertex buffers to vertex array
+            for (binding_idx, binding) in vertex_buffer_bindings.iter().enumerate() {
                 gl::VertexArrayVertexBuffer(
                     gl_handle,
                     binding_idx as GLuint,
-                    buffer.buffer.handle(),
+                    binding.buffer.handle(),
                     0,
-                    buffer.buffer.element_size(),
+                    binding.buffer.element_size(),
                 );
             }
+
+            // Bind index buffer to vertex array
             gl::VertexArrayElementBuffer(gl_handle, index_buffer.handle());
 
+            // Next we will loop through all the vertex buffer bindings
             let mut attribute_idx = 0;
-            for (binding_idx, buffer) in vertex_buffers.iter().enumerate() {
-                gl::VertexArrayBindingDivisor(gl_handle, binding_idx as GLuint, buffer.divisor);
+            for (binding_idx, binding) in vertex_buffer_bindings.iter().enumerate() {
+                // Set the divisor for this binding
+                gl::VertexArrayBindingDivisor(gl_handle, binding_idx as GLuint, binding.divisor);
+                
+                // Next we will loop through all of the vertex attribute bindings provided by this binding's vertex buffer
                 let mut offset = 0;
-                for &binding in buffer.buffer.vertex_attribute_bindings().iter() {
+                for &binding in binding.buffer.vertex_attribute_bindings().iter() {
+                    // Enable this vertex attribute at the next unused location (attribute_idx)
                     gl::EnableVertexArrayAttrib(gl_handle, attribute_idx);
+
+                    // Set this vertex attribute to use the current bertex buffer binding to get its data
                     gl::VertexArrayAttribBinding(gl_handle, attribute_idx, binding_idx as GLuint);
+
+                    // Set the format for this vertex attribute and increment offset based on the format's size
                     match binding {
                         VertexAttributeBinding::PositionF3 => {
                             gl::VertexArrayAttribFormat(
@@ -96,6 +111,8 @@ impl VertexArray {
                             offset += size_of::<Vector<f32, 2>>() as GLuint;
                         }
                     }
+                    
+                    // Increment attribute_idx to use the next unused location for the next vertex attribute binding
                     attribute_idx += 1;
                 }
             }
@@ -103,7 +120,7 @@ impl VertexArray {
 
         Self {
             gl_handle,
-            vertex_buffers,
+            vertex_buffer_bindings,
             index_buffer,
         }
     }
@@ -113,11 +130,11 @@ impl VertexArray {
     }
 
     pub fn max_instance_count(&self) -> Option<GLsizeiptr> {
-        self.vertex_buffers
+        self.vertex_buffer_bindings
             .iter()
             .filter(|binding| binding.divisor > 0)
             .map(|binding| binding.buffer.length() * binding.divisor as GLsizeiptr)
-            .max()
+            .min()
     }
 }
 

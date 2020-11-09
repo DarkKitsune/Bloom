@@ -1,11 +1,6 @@
 use crate::*;
 use std::ffi::CString;
 
-const VERTEX_ATTRIBUTE_BINDINGS: [VertexAttributeBinding; 2] = [
-    VertexAttributeBinding::PositionF3,
-    VertexAttributeBinding::ColorF3,
-];
-
 pub struct HelloTriangleMaterial {
     pipeline: Pipeline,
 }
@@ -61,9 +56,5 @@ void main()
 impl Material for HelloTriangleMaterial {
     fn pipeline(&self) -> &Pipeline {
         &self.pipeline
-    }
-
-    fn vertex_attribute_bindings() -> &'static [VertexAttributeBinding] {
-        &VERTEX_ATTRIBUTE_BINDINGS
     }
 }
