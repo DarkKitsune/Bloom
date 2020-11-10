@@ -8,12 +8,12 @@ const VERTEX_ATTRIBUTE_BINDINGS: [VertexAttributeBinding; 2] = [
 
 #[repr(C)]
 pub struct PosColorVertex {
-    position: Vector<f32, 3>,
-    color: Vector<f32, 3>,
+    position: Vec3f,
+    color: Vec3f,
 }
 
 impl PosColorVertex {
-    pub fn new(position: Vector<f32, 3>, color: Vector<f32, 3>) -> Self {
+    pub fn new(position: Vec3f, color: Vec3f) -> Self {
         Self { position, color }
     }
 }

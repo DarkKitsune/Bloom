@@ -23,13 +23,13 @@ impl GFX {
         Self {}
     }
 
-    pub fn clear_color(&self, framebuffer: &mut Framebuffer, clear_color: &Vector<f32, 4>) {
+    pub fn clear_color(&self, framebuffer: &mut Framebuffer, clear_color: &Vec4f) {
         unsafe {
             gl::ClearNamedFramebufferfv(
                 framebuffer.handle(),
                 gl::COLOR,
                 0,
-                clear_color as *const Vector<f32, 4> as *const _,
+                clear_color as *const Vec4f as *const _,
             )
         };
     }

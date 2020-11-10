@@ -58,11 +58,13 @@ impl VertexArray {
                 // Next we will loop through all of the vertex attribute bindings provided by this binding's vertex buffer
                 let mut offset = 0;
                 for &binding in binding.buffer.vertex_attribute_bindings().iter() {
-                    // Enable this vertex attribute at the next unused location (attribute_idx)
-                    gl::EnableVertexArrayAttrib(gl_handle, attribute_idx);
+                    for add in 0 .. binding.locations_used() {
+                        // Enable this vertex attribute at the next unused location (attribute_idx)
+                        gl::EnableVertexArrayAttrib(gl_handle, attribute_idx + add);
 
-                    // Set this vertex attribute to use the current bertex buffer binding to get its data
-                    gl::VertexArrayAttribBinding(gl_handle, attribute_idx, binding_idx as GLuint);
+                        // Set this vertex attribute to use the current bertex buffer binding to get its data
+                        gl::VertexArrayAttribBinding(gl_handle, attribute_idx + add, binding_idx as GLuint);
+                    }
 
                     // Set the format for this vertex attribute and increment offset based on the format's size
                     match binding {
@@ -75,7 +77,7 @@ impl VertexArray {
                                 gl::FALSE,
                                 offset,
                             );
-                            offset += size_of::<Vector<f32, 3>>() as GLuint;
+                            offset += size_of::<Vec3f>() as GLuint;
                         }
                         VertexAttributeBinding::NormalF3 => {
                             gl::VertexArrayAttribFormat(
@@ -86,7 +88,7 @@ impl VertexArray {
                                 gl::FALSE,
                                 offset,
                             );
-                            offset += size_of::<Vector<f32, 3>>() as GLuint;
+                            offset += size_of::<Vec3f>() as GLuint;
                         }
                         VertexAttributeBinding::ColorF3 => {
                             gl::VertexArrayAttribFormat(
@@ -97,7 +99,7 @@ impl VertexArray {
                                 gl::FALSE,
                                 offset,
                             );
-                            offset += size_of::<Vector<f32, 3>>() as GLuint;
+                            offset += size_of::<Vec3f>() as GLuint;
                         }
                         VertexAttributeBinding::TexCoordF2 => {
                             gl::VertexArrayAttribFormat(
@@ -108,12 +110,50 @@ impl VertexArray {
                                 gl::FALSE,
                                 offset,
                             );
-                            offset += size_of::<Vector<f32, 2>>() as GLuint;
+                            offset += size_of::<Vec2f>() as GLuint;
+                        }
+                        VertexAttributeBinding::Transform => {
+                            gl::VertexArrayAttribFormat(
+                                gl_handle,
+                                attribute_idx,
+                                4,
+                                gl::FLOAT,
+                                gl::FALSE,
+                                offset,
+                            );
+                            offset += size_of::<Vec4f>() as GLuint;
+                            gl::VertexArrayAttribFormat(
+                                gl_handle,
+                                attribute_idx + 1,
+                                4,
+                                gl::FLOAT,
+                                gl::FALSE,
+                                offset,
+                            );
+                            offset += size_of::<Vec4f>() as GLuint;
+                            gl::VertexArrayAttribFormat(
+                                gl_handle,
+                                attribute_idx + 2,
+                                4,
+                                gl::FLOAT,
+                                gl::FALSE,
+                                offset,
+                            );
+                            offset += size_of::<Vec4f>() as GLuint;
+                            gl::VertexArrayAttribFormat(
+                                gl_handle,
+                                attribute_idx + 3,
+                                4,
+                                gl::FLOAT,
+                                gl::FALSE,
+                                offset,
+                            );
+                            offset += size_of::<Vec4f>() as GLuint;
                         }
                     }
                     
                     // Increment attribute_idx to use the next unused location for the next vertex attribute binding
-                    attribute_idx += 1;
+                    attribute_idx += binding.locations_used();
                 }
             }
         }

@@ -1,5 +1,5 @@
-use fennec_algebra::Vector;
+use crate::*;
 
 pub trait DrawTarget {
-    fn size() -> Vector<u32, 2>;
+    fn size() -> Vec2u;
 }

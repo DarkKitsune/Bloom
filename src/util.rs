@@ -4,6 +4,19 @@ pub use gl::types::GLint;
 pub use gl::types::GLsizei;
 pub use gl::types::GLsizeiptr;
 pub use gl::types::GLuint;
+pub type Mat4f = fennec_algebra::Matrix<f32, 4, 4>;
+pub type Vec2f = fennec_algebra::Vector<f32, 2>;
+pub type Vec3f = fennec_algebra::Vector<f32, 3>;
+pub type Vec4f = fennec_algebra::Vector<f32, 4>;
+pub type Vec2d = fennec_algebra::Vector<f64, 2>;
+pub type Vec3d = fennec_algebra::Vector<f64, 3>;
+pub type Vec4d = fennec_algebra::Vector<f64, 4>;
+pub type Vec2u = fennec_algebra::Vector<u32, 2>;
+pub type Vec3u = fennec_algebra::Vector<u32, 3>;
+pub type Vec4u = fennec_algebra::Vector<u32, 4>;
+pub type Vec2i = fennec_algebra::Vector<i32, 2>;
+pub type Vec3i = fennec_algebra::Vector<i32, 3>;
+pub type Vec4i = fennec_algebra::Vector<i32, 4>;
 
 #[macro_export]
 macro_rules! init_array {

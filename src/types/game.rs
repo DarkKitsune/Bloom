@@ -26,8 +26,8 @@ impl Game {
         let hello_triangle_material = HelloTriangleMaterial::new();
         let hello_triangle_instances = Buffer::from_slice(
             &[
-                PosVertex::new(vector!(-0.8, -0.8, 0.0)),
-                PosVertex::new(vector!(0.8, 0.8, 0.0)),
+                InstanceModelVertex::new(vector!(-0.8, -0.8, 0.0), vector!(0.5, 0.5, 1.0)),
+                InstanceModelVertex::new(vector!(0.8, 0.8, 0.0), vector!(0.6, 0.6, 1.0)),
             ],
             false,
         );
@@ -73,8 +73,11 @@ impl Game {
                 break;
             }
 
+            // Clear buffer
             self.gfx
                 .clear_color(&mut window_framebuffer(), &vector!(1.0, 0.0, 0.5, 1.0));
+            
+            // Draw test triangles
             self.gfx.draw_indices(
                 &self.hello_triangle_material,
                 &self.hello_triangle_vertex_array,
