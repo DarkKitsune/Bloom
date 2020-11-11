@@ -1,5 +1,4 @@
 use crate::*;
-use fennec_algebra::*;
 
 const VERTEX_ATTRIBUTE_BINDINGS: [VertexAttributeBinding; 2] = [
     VertexAttributeBinding::PositionF3,

@@ -1,5 +1,4 @@
 use crate::*;
-use fennec_algebra::*;
 use std::ffi::{c_void, CString};
 
 //const MAX_DEBUG_MESSAGES: usize = 10;
@@ -59,24 +58,30 @@ impl GFX {
         instance_count: GLsizei,
     ) {
         unsafe {
-            if instance_count == 1 {
+            // Avoid trying to draw 0 instances
+            if instance_count < 1 {
                 panic!("Must draw at least one instance");
             }
+
+            // Don't allow drawing more instances than possible with the attached instance buffers (if any)
             if let Some(max_instances) = vertex_array.max_instance_count() {
                 if instance_count as GLsizeiptr > max_instances {
                     panic!("Given instance count is too large to draw; at least one vertex buffer with an instance input rate is not large enough");
                 }
             }
+
+            // Bind the program pipeline of the material so we can render using the attached programs
             gl::BindProgramPipeline(material.pipeline().handle());
 
-            // Apply view matrix to 'view' uniform if it exists
+            // Try to get the location of the 'view' matrix from the vertex program
             let view_uniform = material
                 .pipeline()
                 .vertex_program()
                 .unwrap()
-                .uniform_location(CString::new("view").unwrap());
+                .uniform_location("view");
+            // Apply view matrix to 'view' uniform if it exists
             if let Some(view_uniform) = view_uniform {
-                let mats = [self.view.clone()];
+                let mats = [self.view];
                 material
                     .pipeline()
                     .vertex_program()
@@ -84,14 +89,15 @@ impl GFX {
                     .set_uniform_mat4f(view_uniform, &mats);
             }
 
-            // Apply projection matrix to 'projection' uniform if it exists
+            // Try to get the location of the 'projection' matrix from the vertex program
             let projection_uniform = material
                 .pipeline()
                 .vertex_program()
                 .unwrap()
-                .uniform_location(CString::new("projection").unwrap());
+                .uniform_location("projection");
+            // Apply projection matrix to 'projection' uniform if it exists
             if let Some(projection_uniform) = projection_uniform {
-                let mats = [self.projection.clone()];
+                let mats = [self.projection];
                 material
                     .pipeline()
                     .vertex_program()
@@ -99,13 +105,18 @@ impl GFX {
                     .set_uniform_mat4f(projection_uniform, &mats);
             }
 
+            // Bind the vertex array for drawing from its attached buffers
             gl::BindVertexArray(vertex_array.handle());
+
+            // Draw using the attached buffers
             gl::DrawArraysInstanced(
                 gl::TRIANGLE_STRIP,
                 0,
                 vertex_array.index_count() as GLsizei,
                 instance_count,
             );
+
+            // Unbind stuff just in case; usually good practice
             gl::BindVertexArray(0);
             gl::BindProgramPipeline(0);
         }

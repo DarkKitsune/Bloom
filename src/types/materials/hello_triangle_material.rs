@@ -65,3 +65,9 @@ impl Material for HelloTriangleMaterial {
         &mut self.pipeline
     }
 }
+
+impl Default for HelloTriangleMaterial {
+    fn default() -> Self {
+        Self::new()
+    }
+}

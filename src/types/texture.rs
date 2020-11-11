@@ -15,11 +15,11 @@ impl TextureType {
 
 pub struct Texture<const TYPE: crate::TextureType> {
     gl_handle: IntHandle,
-    size: Vec2u,
+    _size: Vec2u,
 }
 
 impl<const TYPE: crate::TextureType> Texture<TYPE> {
-    fn new<const COUNT: usize>(size: Vec2u) -> [Self; COUNT] {
+    fn _new<const COUNT: usize>(size: Vec2u) -> [Self; COUNT] {
         // Create handle array
         let mut handles = [Default::default(); COUNT];
 
@@ -29,7 +29,10 @@ impl<const TYPE: crate::TextureType> Texture<TYPE> {
         // Wrap the handles and return the wrappers
         handles
             .iter()
-            .map(|&gl_handle| Self { gl_handle, size })
+            .map(|&gl_handle| Self {
+                gl_handle,
+                _size: size,
+            })
             .collect_array()
     }
 }

@@ -3,8 +3,8 @@ use crate::*;
 pub fn window_framebuffer() -> Framebuffer {
     Framebuffer {
         gl_handle: 0,
-        allow_draw: true,
-        allow_read: false,
+        _allow_draw: true,
+        _allow_read: false,
     }
 }
 
@@ -29,12 +29,12 @@ impl AttachmentType {
 
 pub struct Framebuffer {
     gl_handle: IntHandle,
-    allow_draw: bool,
-    allow_read: bool,
+    _allow_draw: bool, // TODO: use these
+    _allow_read: bool,
 }
 
 impl Framebuffer {
-    fn new<const COUNT: usize>(allow_draw: bool, allow_read: bool) -> [Self; COUNT] {
+    fn _new<const COUNT: usize>(allow_draw: bool, allow_read: bool) -> [Self; COUNT] {
         // Create handle array
         let mut handles = [Default::default(); COUNT];
 
@@ -59,14 +59,14 @@ impl Framebuffer {
                 }*/
                 Self {
                     gl_handle,
-                    allow_draw,
-                    allow_read,
+                    _allow_draw: allow_draw,
+                    _allow_read: allow_read,
                 }
             })
             .collect_array()
     }
 
-    fn set_attachment<const TEXTURE_TYPE: TextureType>(
+    fn _set_attachment<const TEXTURE_TYPE: TextureType>(
         &mut self,
         attachment: AttachmentType,
         texture: Texture<TEXTURE_TYPE>,

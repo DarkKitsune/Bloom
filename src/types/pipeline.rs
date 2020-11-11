@@ -1,5 +1,4 @@
 use crate::*;
-use std::ffi::CStr;
 
 pub struct Pipeline {
     gl_handle: IntHandle,
@@ -8,13 +7,18 @@ pub struct Pipeline {
 
 impl Pipeline {
     pub fn new(stages: impl IntoIterator<Item = Program>) -> Self {
+        // Gather the stages (programs) into a vector for storing later
         let stages = stages.into_iter().collect::<Vec<Program>>();
-        // Create the shader program object
+
+        // Create program pipeline unifying the stages
         let mut gl_handle = Default::default();
         unsafe { gl::CreateProgramPipelines(1, &mut gl_handle as *mut _) };
+
+        // Tell the pipeline to use the stages
         for stage in stages.iter() {
             unsafe { gl::UseProgramStages(gl_handle, stage.stage().stage_bit(), stage.handle()) };
         }
+        
         Self { gl_handle, stages }
     }
 

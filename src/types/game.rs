@@ -23,7 +23,10 @@ impl Game {
         let gfx = GFX::new(&mut window);
 
         // Create core assets
+        // Material
         let hello_triangle_material = HelloTriangleMaterial::new();
+
+        // Instance buffer
         let hello_triangle_instances = Buffer::from_slice(
             &[
                 InstanceModelVertex::new(vector!(-0.8, -0.8, 0.0), vector!(0.5, 0.5, 1.0)),
@@ -31,6 +34,8 @@ impl Game {
             ],
             false,
         );
+
+        // Vertex buffer
         let hello_triangle_vertices = Buffer::from_slice(
             &[
                 PosColorVertex::new(vector!(-1.0, -1.0, 0.0), vector!(1.0, 0.0, 0.0)),
@@ -39,12 +44,17 @@ impl Game {
             ],
             false,
         );
+
+        // Instance & vertex buffers combined
         let hello_triangle_vertex_bindings = vec![
             VertexBufferBinding::new(Box::new(hello_triangle_instances), 1),
             VertexBufferBinding::new(Box::new(hello_triangle_vertices), 0),
         ];
 
+        // Index buffer
         let hello_triangle_indices = Buffer::from_slice(&[0, 1, 2], false);
+
+        // Final vertex array
         let hello_triangle_vertex_array =
             VertexArray::new(hello_triangle_vertex_bindings, hello_triangle_indices);
 

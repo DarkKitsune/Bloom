@@ -62,9 +62,9 @@ impl Program {
         self.stage
     }
 
-    pub fn uniform_location(&self, name: impl Into<CString>) -> Option<GLuint> {
-        let name = name.into();
-        let location = unsafe { gl::GetUniformLocation(self.handle(), name.as_ptr()) };
+    pub fn uniform_location(&self, name: impl AsRef<str>) -> Option<GLuint> {
+        let name = CString::new(name.as_ref()).unwrap();
+        let location = unsafe { gl::GetUniformLocation(self.handle(), name.as_ref().as_ptr()) };
         if location < 0 {
             None
         } else {

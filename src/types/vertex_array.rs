@@ -1,5 +1,4 @@
 use crate::*;
-use fennec_algebra::*;
 use std::mem::size_of;
 
 pub struct VertexBufferBinding {
