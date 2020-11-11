@@ -1,3 +1,4 @@
+use crate::*;
 use fennec_algebra::*;
 use glfw::Context;
 use glfw::GLProc;
@@ -7,10 +8,11 @@ pub struct Window {
     glfw_window: Option<glfw::Window>,
     event_receiver: Receiver<(f64, glfw::WindowEvent)>,
     closed: bool,
+    size: Vec2u,
 }
 
 impl Window {
-    pub fn new(glfw: &mut glfw::Glfw, size: Vector<u32, 2>, title: impl AsRef<str>) -> Self {
+    pub fn new(glfw: &mut glfw::Glfw, size: Vec2u, title: impl AsRef<str>) -> Self {
         // Set hints for window
         glfw.window_hint(glfw::WindowHint::ContextVersion(4, 5));
         glfw.window_hint(glfw::WindowHint::OpenGlDebugContext(true));
@@ -37,6 +39,7 @@ impl Window {
             glfw_window: Some(glfw_window),
             event_receiver,
             closed: false,
+            size,
         }
     }
 
@@ -79,5 +82,13 @@ impl Window {
 
     pub fn poll_events(glfw: &mut glfw::Glfw) {
         glfw.poll_events();
+    }
+
+    pub fn size(&self) -> Vec2u {
+        self.size
+    }
+
+    pub fn aspect_ratio(&self) -> f32 {
+        *self.size.x() as f32 / *self.size.y() as f32
     }
 }

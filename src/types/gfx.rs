@@ -5,7 +5,10 @@ use std::ffi::{c_void, CString};
 //const MAX_DEBUG_MESSAGES: usize = 10;
 //const MAX_DEBUG_MESSAGES_SIZE: usize = MAX_DEBUG_MESSAGES * 256;
 
-pub struct GFX {}
+pub struct GFX {
+    view: Mat4f,
+    projection: Mat4f,
+}
 
 impl GFX {
     pub fn new(main_window: &mut Window) -> Self {
@@ -20,7 +23,10 @@ impl GFX {
             gl::DebugMessageCallback(Some(debug_message_callback), std::ptr::null());
         }
 
-        Self {}
+        Self {
+            view: Mat4f::identity(),
+            projection: Mat4f::identity(),
+        }
     }
 
     pub fn clear_color(&self, framebuffer: &mut Framebuffer, clear_color: &Vec4f) {
@@ -38,6 +44,14 @@ impl GFX {
         gl::BindProgramPipeline(pipeline.handle());
     }*/
 
+    pub fn set_view(&mut self, view: Mat4f) {
+        self.view = view;
+    }
+
+    pub fn set_projection(&mut self, projection: Mat4f) {
+        self.projection = projection;
+    }
+
     pub fn draw_indices(
         &self,
         material: &impl Material,
@@ -54,6 +68,37 @@ impl GFX {
                 }
             }
             gl::BindProgramPipeline(material.pipeline().handle());
+
+            // Apply view matrix to 'view' uniform if it exists
+            let view_uniform = material
+                .pipeline()
+                .vertex_program()
+                .unwrap()
+                .uniform_location(CString::new("view").unwrap());
+            if let Some(view_uniform) = view_uniform {
+                let mats = [self.view.clone()];
+                material
+                    .pipeline()
+                    .vertex_program()
+                    .unwrap()
+                    .set_uniform_mat4f(view_uniform, &mats);
+            }
+
+            // Apply projection matrix to 'projection' uniform if it exists
+            let projection_uniform = material
+                .pipeline()
+                .vertex_program()
+                .unwrap()
+                .uniform_location(CString::new("projection").unwrap());
+            if let Some(projection_uniform) = projection_uniform {
+                let mats = [self.projection.clone()];
+                material
+                    .pipeline()
+                    .vertex_program()
+                    .unwrap()
+                    .set_uniform_mat4f(projection_uniform, &mats);
+            }
+
             gl::BindVertexArray(vertex_array.handle());
             gl::DrawArraysInstanced(
                 gl::TRIANGLE_STRIP,

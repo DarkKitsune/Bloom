@@ -54,16 +54,20 @@ impl VertexArray {
             for (binding_idx, binding) in vertex_buffer_bindings.iter().enumerate() {
                 // Set the divisor for this binding
                 gl::VertexArrayBindingDivisor(gl_handle, binding_idx as GLuint, binding.divisor);
-                
+
                 // Next we will loop through all of the vertex attribute bindings provided by this binding's vertex buffer
                 let mut offset = 0;
                 for &binding in binding.buffer.vertex_attribute_bindings().iter() {
-                    for add in 0 .. binding.locations_used() {
+                    for add in 0..binding.locations_used() {
                         // Enable this vertex attribute at the next unused location (attribute_idx)
                         gl::EnableVertexArrayAttrib(gl_handle, attribute_idx + add);
 
                         // Set this vertex attribute to use the current bertex buffer binding to get its data
-                        gl::VertexArrayAttribBinding(gl_handle, attribute_idx + add, binding_idx as GLuint);
+                        gl::VertexArrayAttribBinding(
+                            gl_handle,
+                            attribute_idx + add,
+                            binding_idx as GLuint,
+                        );
                     }
 
                     // Set the format for this vertex attribute and increment offset based on the format's size
@@ -151,7 +155,7 @@ impl VertexArray {
                             offset += size_of::<Vec4f>() as GLuint;
                         }
                     }
-                    
+
                     // Increment attribute_idx to use the next unused location for the next vertex attribute binding
                     attribute_idx += binding.locations_used();
                 }

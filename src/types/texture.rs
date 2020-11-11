@@ -15,11 +15,11 @@ impl TextureType {
 
 pub struct Texture<const TYPE: crate::TextureType> {
     gl_handle: IntHandle,
-    size: fennec_algebra::Vector<u32, 2>,
+    size: Vec2u,
 }
 
 impl<const TYPE: crate::TextureType> Texture<TYPE> {
-    fn new<const COUNT: usize>(size: fennec_algebra::Vector<u32, 2>) -> [Self; COUNT] {
+    fn new<const COUNT: usize>(size: Vec2u) -> [Self; COUNT] {
         // Create handle array
         let mut handles = [Default::default(); COUNT];
 

@@ -27,7 +27,7 @@ impl Game {
         let hello_triangle_instances = Buffer::from_slice(
             &[
                 InstanceModelVertex::new(vector!(-0.8, -0.8, 0.0), vector!(0.5, 0.5, 1.0)),
-                InstanceModelVertex::new(vector!(0.8, 0.8, 0.0), vector!(0.6, 0.6, 1.0)),
+                InstanceModelVertex::new(vector!(0.8, 0.8, 0.0), vector!(0.9, 0.9, 1.0)),
             ],
             false,
         );
@@ -76,7 +76,26 @@ impl Game {
             // Clear buffer
             self.gfx
                 .clear_color(&mut window_framebuffer(), &vector!(1.0, 0.0, 0.5, 1.0));
-            
+
+            // Set the camera
+            self.gfx.set_view(
+                Mat4f::view(
+                    vector!(1.0, 2.0, 5.0),
+                    vector!(0.0, 0.0, 0.0),
+                    vector!(0.0, 0.0, 1.0),
+                )
+                .unwrap(),
+            );
+            self.gfx.set_projection(
+                Mat4f::projection(
+                    std::f32::consts::PI * 0.5,
+                    self.window.aspect_ratio(),
+                    0.01,
+                    100.0,
+                )
+                .unwrap(),
+            );
+
             // Draw test triangles
             self.gfx.draw_indices(
                 &self.hello_triangle_material,

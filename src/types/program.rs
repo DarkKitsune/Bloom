@@ -61,6 +61,28 @@ impl Program {
     pub fn stage(&self) -> ShaderStage {
         self.stage
     }
+
+    pub fn uniform_location(&self, name: impl Into<CString>) -> Option<GLuint> {
+        let name = name.into();
+        let location = unsafe { gl::GetUniformLocation(self.handle(), name.as_ptr()) };
+        if location < 0 {
+            None
+        } else {
+            Some(location as GLuint)
+        }
+    }
+
+    pub fn set_uniform_mat4f(&self, location: GLuint, mats: &[Mat4f]) {
+        unsafe {
+            gl::ProgramUniformMatrix4fv(
+                self.handle(),
+                location as GLint,
+                mats.len() as i32,
+                gl::FALSE,
+                mats.as_ptr() as *const _,
+            )
+        };
+    }
 }
 
 impl GLHandle for Program {

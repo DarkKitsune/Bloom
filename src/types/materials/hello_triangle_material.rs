@@ -20,10 +20,13 @@ layout(location = 0) out vec4 f_color;
 
 out gl_PerVertex { vec4 gl_Position; };
 
+layout(location = 0) uniform mat4 view;
+layout(location = 5) uniform mat4 projection;
+
 void main()
 {
     f_color = vec4(v_color, 1.0);
-    gl_Position = i_matrix * vec4(v_position, 1.0);
+    gl_Position = projection * view * i_matrix * vec4(v_position, 1.0);
 }",
         )
         .unwrap();
@@ -56,5 +59,9 @@ void main()
 impl Material for HelloTriangleMaterial {
     fn pipeline(&self) -> &Pipeline {
         &self.pipeline
+    }
+
+    fn pipeline_mut(&mut self) -> &mut Pipeline {
+        &mut self.pipeline
     }
 }

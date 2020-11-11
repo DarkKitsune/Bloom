@@ -3,7 +3,7 @@ use std::ffi::CStr;
 
 pub struct Pipeline {
     gl_handle: IntHandle,
-    _stages: Vec<Program>,
+    stages: Vec<Program>,
 }
 
 impl Pipeline {
@@ -15,10 +15,19 @@ impl Pipeline {
         for stage in stages.iter() {
             unsafe { gl::UseProgramStages(gl_handle, stage.stage().stage_bit(), stage.handle()) };
         }
-        Self {
-            gl_handle,
-            _stages: stages,
-        }
+        Self { gl_handle, stages }
+    }
+
+    pub fn vertex_program(&self) -> Option<&Program> {
+        self.stages
+            .iter()
+            .find(|e| e.stage() == ShaderStage::Vertex)
+    }
+
+    pub fn vertex_program_mut(&mut self) -> Option<&mut Program> {
+        self.stages
+            .iter_mut()
+            .find(|e| e.stage() == ShaderStage::Vertex)
     }
 }
 
