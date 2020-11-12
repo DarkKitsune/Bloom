@@ -73,37 +73,27 @@ impl GFX {
             // Bind the program pipeline of the material so we can render using the attached programs
             gl::BindProgramPipeline(material.pipeline().handle());
 
-            // Try to get the location of the 'view' matrix from the vertex program
+            // Get the location of the view matrix from the vertex program
             let view_uniform = material
                 .pipeline()
-                .vertex_program()
-                .unwrap()
-                .uniform_location("view");
-            // Apply view matrix to 'view' uniform if it exists
-            if let Some(view_uniform) = view_uniform {
-                let mats = [self.view];
-                material
-                    .pipeline()
-                    .vertex_program()
-                    .unwrap()
-                    .set_uniform_mat4f(view_uniform, &mats);
-            }
-
-            // Try to get the location of the 'projection' matrix from the vertex program
-            let projection_uniform = material
+                .view_uniform_location();
+            // Apply view matrix to view uniform
+            let mats = [self.view];
+            material
                 .pipeline()
                 .vertex_program()
-                .unwrap()
-                .uniform_location("projection");
-            // Apply projection matrix to 'projection' uniform if it exists
-            if let Some(projection_uniform) = projection_uniform {
-                let mats = [self.projection];
-                material
-                    .pipeline()
-                    .vertex_program()
-                    .unwrap()
-                    .set_uniform_mat4f(projection_uniform, &mats);
-            }
+                .set_uniform_mat4f(view_uniform, &mats);
+
+            // Get the location of the projection matrix from the vertex program
+            let projection_uniform = material
+                .pipeline()
+                .projection_uniform_location();
+            // Apply projection matrix to projection uniform
+            let mats = [self.projection];
+            material
+                .pipeline()
+                .vertex_program()
+                .set_uniform_mat4f(projection_uniform, &mats);
 
             // Bind the vertex array for drawing from its attached buffers
             gl::BindVertexArray(vertex_array.handle());

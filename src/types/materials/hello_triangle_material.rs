@@ -1,17 +1,8 @@
 use crate::*;
 use std::ffi::CString;
 
-pub struct HelloTriangleMaterial {
-    pipeline: Pipeline,
-}
-
-impl HelloTriangleMaterial {
-    pub fn new() -> Self {
-        // Create vertex shader code
-        let vertex_shader = CString::new(
-            "
-#version 450
-
+const VERTEX_SHADER: &'static str = "
+#[feature(view, projection)]
 layout(location = 0) in mat4 i_matrix;
 layout(location = 4) in vec3 v_position;
 layout(location = 5) in vec3 v_color;
@@ -20,20 +11,13 @@ layout(location = 0) out vec4 f_color;
 
 out gl_PerVertex { vec4 gl_Position; };
 
-layout(location = 0) uniform mat4 view;
-layout(location = 5) uniform mat4 projection;
-
 void main()
 {
     f_color = vec4(v_color, 1.0);
-    gl_Position = projection * view * i_matrix * vec4(v_position, 1.0);
-}",
-        )
-        .unwrap();
+    gl_Position = applyProjection(applyView(i_matrix * vec4(v_position, 1.0)));
+}";
 
-        // Create fragment shader code
-        let fragment_shader = CString::new(
-            "
+const FRAGMENT_SHADER: &'static str = "
 #version 450
 
 layout(location = 0) in vec4 f_color;
@@ -43,13 +27,17 @@ layout(location = 0) out vec4 out_color;
 void main()
 {
     out_color = f_color;
-}",
-        )
-        .unwrap();
+}";
 
+pub struct HelloTriangleMaterial {
+    pipeline: Pipeline,
+}
+
+impl HelloTriangleMaterial {
+    pub fn new() -> Self {
         let stages = vec![
-            Program::new(ShaderStage::Vertex, &vertex_shader),
-            Program::new(ShaderStage::Fragment, &fragment_shader),
+            Program::new(ShaderStage::Vertex, VERTEX_SHADER),
+            Program::new(ShaderStage::Fragment, FRAGMENT_SHADER),
         ];
         let pipeline = Pipeline::new(stages);
         Self { pipeline }

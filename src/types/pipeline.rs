@@ -22,16 +22,34 @@ impl Pipeline {
         Self { gl_handle, stages }
     }
 
-    pub fn vertex_program(&self) -> Option<&Program> {
+    pub fn vertex_program(&self) -> &Program {
         self.stages
             .iter()
             .find(|e| e.stage() == ShaderStage::Vertex)
+            .expect("Pipeline does not have a vertex stage")
     }
 
-    pub fn vertex_program_mut(&mut self) -> Option<&mut Program> {
+    pub fn vertex_program_mut(&mut self) -> &mut Program {
         self.stages
             .iter_mut()
             .find(|e| e.stage() == ShaderStage::Vertex)
+            .expect("Pipeline does not have a vertex stage")
+    }
+
+    pub fn view_uniform_location(&self) -> GLuint {
+        self.vertex_program().uniform_location(FEATURE_VIEW_UNIFORM_NAME).expect("Vertex shader does not use the 'view' feature")
+    }
+
+    pub fn projection_uniform_location(&self) -> GLuint {
+        self.vertex_program().uniform_location(FEATURE_PROJECTION_UNIFORM_NAME).expect("Vertex shader does not use the 'projection' feature")
+    }
+
+    pub fn shader_features(&self) -> Vec<ShaderFeature> {
+        self.stages.iter().map(|stage| stage.shader_features().iter().cloned()).flatten().collect()
+    }
+
+    pub fn has_shader_feature(&self, feature: ShaderFeature) -> bool {
+        self.stages.iter().map(|stage| stage.shader_features().iter().cloned()).flatten().find(|&e| e == feature).is_some()
     }
 }
 
