@@ -18,7 +18,7 @@ impl Pipeline {
         for stage in stages.iter() {
             unsafe { gl::UseProgramStages(gl_handle, stage.stage().stage_bit(), stage.handle()) };
         }
-        
+
         Self { gl_handle, stages }
     }
 
@@ -37,19 +37,32 @@ impl Pipeline {
     }
 
     pub fn view_uniform_location(&self) -> GLuint {
-        self.vertex_program().uniform_location(FEATURE_VIEW_UNIFORM_NAME).expect("Vertex shader does not use the 'view' feature")
+        self.vertex_program()
+            .uniform_location(FEATURE_VIEW_UNIFORM_NAME)
+            .expect("Vertex shader does not use the 'view' feature")
     }
 
     pub fn projection_uniform_location(&self) -> GLuint {
-        self.vertex_program().uniform_location(FEATURE_PROJECTION_UNIFORM_NAME).expect("Vertex shader does not use the 'projection' feature")
+        self.vertex_program()
+            .uniform_location(FEATURE_PROJECTION_UNIFORM_NAME)
+            .expect("Vertex shader does not use the 'projection' feature")
     }
 
     pub fn shader_features(&self) -> Vec<ShaderFeature> {
-        self.stages.iter().map(|stage| stage.shader_features().iter().cloned()).flatten().collect()
+        self.stages
+            .iter()
+            .map(|stage| stage.shader_features().iter().cloned())
+            .flatten()
+            .collect()
     }
 
     pub fn has_shader_feature(&self, feature: ShaderFeature) -> bool {
-        self.stages.iter().map(|stage| stage.shader_features().iter().cloned()).flatten().find(|&e| e == feature).is_some()
+        self.stages
+            .iter()
+            .map(|stage| stage.shader_features().iter().cloned())
+            .flatten()
+            .find(|&e| e == feature)
+            .is_some()
     }
 }
 

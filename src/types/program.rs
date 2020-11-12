@@ -1,7 +1,7 @@
 use crate::*;
-use std::ffi::{CStr, CString};
-use regex::*;
 use lazy_static::*;
+use regex::*;
+use std::ffi::{CStr, CString};
 
 const MAX_PROGRAM_INFO_LOG_SIZE: usize = 1024;
 const VERSION_NUMBER: &'static str = "#version 450";
@@ -26,7 +26,8 @@ impl ShaderFeature {
 
     fn inserted_code(self) -> String {
         match self {
-            ShaderFeature::View => format!("
+            ShaderFeature::View => format!(
+                "
 uniform mat4 {0};
 mat4 applyView(mat4 a) {{
     return {0} * a;
@@ -34,9 +35,12 @@ mat4 applyView(mat4 a) {{
 
 vec4 applyView(vec4 a) {{
     return {0} * a;
-}}", FEATURE_VIEW_UNIFORM_NAME),
+}}",
+                FEATURE_VIEW_UNIFORM_NAME
+            ),
 
-            ShaderFeature::Projection => format!("
+            ShaderFeature::Projection => format!(
+                "
 uniform mat4 {0};
 mat4 applyProjection(mat4 a) {{
     return {0} * a;
@@ -44,7 +48,9 @@ mat4 applyProjection(mat4 a) {{
 
 vec4 applyProjection(vec4 a) {{
     return {0} * a;
-}}", FEATURE_PROJECTION_UNIFORM_NAME),
+}}",
+                FEATURE_PROJECTION_UNIFORM_NAME
+            ),
         }
     }
 }
@@ -63,7 +69,7 @@ impl ShaderDirective {
         }
     }
 
-    fn from_name_args(name: impl AsRef<str>, mut args: Vec<impl Into<String>>,) -> Self {
+    fn from_name_args(name: impl AsRef<str>, mut args: Vec<impl Into<String>>) -> Self {
         let name = name.as_ref().trim();
         let args = args.drain(..).map(|a| a.into()).collect::<Vec<String>>();
 
@@ -82,7 +88,7 @@ impl ShaderDirective {
                     inserted.push_str("\n");
                 }
                 Some(inserted)
-            },
+            }
             _ => None,
         }
     }
@@ -120,28 +126,33 @@ impl ShaderStage {
         *code = code.replace("\r", "").replace(VERSION_NUMBER, "");
 
         // Search for directives
-        let mut directives = RE_DIRECTIVE.find_iter(&code).map(|mat|{
-            // Isolate just the directive string
-            let directive = &code[mat.range()];
+        let mut directives = RE_DIRECTIVE
+            .find_iter(&code)
+            .map(|mat| {
+                // Isolate just the directive string
+                let directive = &code[mat.range()];
 
-            // Check the formatting of the directive
-            if let Some(name_args) = RE_NAME_ARGS.captures(directive) {
-                // DIRECTIVENAME(ARGS)
-                // Get the name
-                let name = &directive[name_args.get(1).unwrap().range()];
+                // Check the formatting of the directive
+                if let Some(name_args) = RE_NAME_ARGS.captures(directive) {
+                    // DIRECTIVENAME(ARGS)
+                    // Get the name
+                    let name = &directive[name_args.get(1).unwrap().range()];
 
-                // Get the args in the parentheses, separated by commas
-                let args = directive[name_args.get(2).unwrap().range()].split(',').map(|arg| arg.trim()).collect();
+                    // Get the args in the parentheses, separated by commas
+                    let args = directive[name_args.get(2).unwrap().range()]
+                        .split(',')
+                        .map(|arg| arg.trim())
+                        .collect();
 
-                // Create a ShaderDirective object for this directive
-                ShaderDirective::from_name_args(name, args)
-            }
-            else {
-                // DIRECTIVENAME or other
-                // Create a ShaderDirective object for this directive
-                ShaderDirective::from_name(directive)
-            }
-        }).collect::<Vec<ShaderDirective>>();
+                    // Create a ShaderDirective object for this directive
+                    ShaderDirective::from_name_args(name, args)
+                } else {
+                    // DIRECTIVENAME or other
+                    // Create a ShaderDirective object for this directive
+                    ShaderDirective::from_name(directive)
+                }
+            })
+            .collect::<Vec<ShaderDirective>>();
 
         // Remove directives from code
         *code = RE_DIRECTIVE.replace(&code, "").into_owned();
@@ -162,7 +173,18 @@ impl ShaderStage {
 
         // Return enabled features
         #[allow(irrefutable_let_patterns)]
-        directives.drain(..).filter_map(|directive| if let ShaderDirective::Features(features) = directive { Some(features) } else { None }).flatten().map(|name| ShaderFeature::from_name(name)).collect()
+        directives
+            .drain(..)
+            .filter_map(|directive| {
+                if let ShaderDirective::Features(features) = directive {
+                    Some(features)
+                } else {
+                    None
+                }
+            })
+            .flatten()
+            .map(|name| ShaderFeature::from_name(name))
+            .collect()
     }
 }
 
@@ -208,10 +230,18 @@ impl Program {
             };
             let message_vec = message_slice.to_owned();
             let message = CString::new(message_vec).unwrap();
-            println!("\x1B[35m{}\nShader code:\n{}\n\x1B[37m", message.to_str().unwrap(), generate_numbered_code(&code));
+            println!(
+                "\x1B[35m{}\nShader code:\n{}\n\x1B[37m",
+                message.to_str().unwrap(),
+                generate_numbered_code(&code)
+            );
         }
 
-        Self { gl_handle, stage, features }
+        Self {
+            gl_handle,
+            stage,
+            features,
+        }
     }
 
     pub fn stage(&self) -> ShaderStage {

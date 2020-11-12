@@ -74,9 +74,7 @@ impl GFX {
             gl::BindProgramPipeline(material.pipeline().handle());
 
             // Get the location of the view matrix from the vertex program
-            let view_uniform = material
-                .pipeline()
-                .view_uniform_location();
+            let view_uniform = material.pipeline().view_uniform_location();
             // Apply view matrix to view uniform
             let mats = [self.view];
             material
@@ -85,9 +83,7 @@ impl GFX {
                 .set_uniform_mat4f(view_uniform, &mats);
 
             // Get the location of the projection matrix from the vertex program
-            let projection_uniform = material
-                .pipeline()
-                .projection_uniform_location();
+            let projection_uniform = material.pipeline().projection_uniform_location();
             // Apply projection matrix to projection uniform
             let mats = [self.projection];
             material
