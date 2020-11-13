@@ -27,11 +27,11 @@ void main()
     out_color = f_color;
 }";
 
-pub struct HelloTriangleMaterial {
+pub struct SpriteMaterial {
     pipeline: Pipeline,
 }
 
-impl HelloTriangleMaterial {
+impl SpriteMaterial {
     pub fn new() -> Self {
         let stages = vec![
             Program::new(ShaderStage::Vertex, VERTEX_SHADER),
@@ -42,7 +42,7 @@ impl HelloTriangleMaterial {
     }
 }
 
-impl Material for HelloTriangleMaterial {
+impl Material for SpriteMaterial {
     fn pipeline(&self) -> &Pipeline {
         &self.pipeline
     }
@@ -52,17 +52,11 @@ impl Material for HelloTriangleMaterial {
     }
 
     fn vertex_attribute_bindings(&self) -> Vec<Vec<VertexAttributeBinding>> {
-        vec![
-            vec![VertexAttributeBinding::Transform],
-            vec![
-                VertexAttributeBinding::PositionF3,
-                VertexAttributeBinding::ColorF3,
-            ],
-        ]
+        vec![vec![VertexAttributeBinding::Transform], vec![]]
     }
 }
 
-impl Default for HelloTriangleMaterial {
+impl Default for SpriteMaterial {
     fn default() -> Self {
         Self::new()
     }

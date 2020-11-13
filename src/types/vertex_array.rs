@@ -10,6 +10,10 @@ impl VertexBufferBinding {
     pub fn new(buffer: Box<dyn DynVertexBuffer>, divisor: GLuint) -> Self {
         Self { buffer, divisor }
     }
+
+    pub fn buffer(&self) -> &Box<dyn DynVertexBuffer> {
+        &self.buffer
+    }
 }
 
 pub struct VertexArray {
@@ -178,6 +182,10 @@ impl VertexArray {
             .filter(|binding| binding.divisor > 0)
             .map(|binding| binding.buffer.length() * binding.divisor as GLsizeiptr)
             .min()
+    }
+
+    pub fn vertex_buffer_bindings(&self) -> &[VertexBufferBinding] {
+        &self.vertex_buffer_bindings
     }
 }
 

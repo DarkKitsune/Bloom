@@ -7,6 +7,7 @@ use std::ffi::{c_void, CString};
 pub struct GFX {
     view: Mat4f,
     projection: Mat4f,
+    transform: Mat4f,
 }
 
 impl GFX {
@@ -16,15 +17,18 @@ impl GFX {
 
         // Set GL settings
         // Enable debug output
-        unsafe {
-            gl::Enable(gl::DEBUG_OUTPUT);
-            gl::Enable(gl::DEBUG_OUTPUT_SYNCHRONOUS);
-            gl::DebugMessageCallback(Some(debug_message_callback), std::ptr::null());
+        if DEBUG {
+            unsafe {
+                gl::Enable(gl::DEBUG_OUTPUT);
+                gl::Enable(gl::DEBUG_OUTPUT_SYNCHRONOUS);
+                gl::DebugMessageCallback(Some(debug_message_callback), std::ptr::null());
+            }
         }
 
         Self {
             view: Mat4f::identity(),
             projection: Mat4f::identity(),
+            transform: Mat4f::identity(),
         }
     }
 
@@ -58,41 +62,61 @@ impl GFX {
         instance_count: GLsizei,
     ) {
         unsafe {
-            // Avoid trying to draw 0 instances
-            if instance_count < 1 {
-                panic!("Must draw at least one instance");
-            }
+            if DEBUG {
+                // Avoid trying to draw 0 instances
+                if instance_count < 1 {
+                    panic!("Must draw at least one instance");
+                }
 
-            // Don't allow drawing more instances than possible with the attached instance buffers (if any)
-            if let Some(max_instances) = vertex_array.max_instance_count() {
-                if instance_count as GLsizeiptr > max_instances {
-                    panic!("Given instance count is too large to draw; at least one vertex buffer with an instance input rate is not large enough");
+                // Don't allow drawing more instances than possible with the attached instance buffers (if any)
+                if let Some(max_instances) = vertex_array.max_instance_count() {
+                    if instance_count as GLsizeiptr > max_instances {
+                        panic!("Given instance count is too large to draw; at least one vertex buffer with an instance input rate is not large enough");
+                    }
                 }
             }
 
             // Bind the program pipeline of the material so we can render using the attached programs
             gl::BindProgramPipeline(material.pipeline().handle());
 
-            // Get the location of the view matrix from the vertex program
-            let view_uniform = material.pipeline().view_uniform_location();
-            // Apply view matrix to view uniform
-            let mats = [self.view];
-            material
+            if material
                 .pipeline()
-                .vertex_program()
-                .set_uniform_mat4f(view_uniform, &mats);
+                .has_shader_feature(ShaderFeature::Camera)
+            {
+                // Get the location of the view matrix from the vertex program
+                let view_uniform = material.pipeline().view_uniform_location();
+                // Apply view matrix to view uniform
+                let mats = [self.view];
+                material
+                    .pipeline()
+                    .vertex_program()
+                    .set_uniform_mat4f(view_uniform, &mats);
 
-            // Get the location of the projection matrix from the vertex program
-            let projection_uniform = material.pipeline().projection_uniform_location();
-            // Apply projection matrix to projection uniform
-            let mats = [self.projection];
-            material
+                // Get the location of the projection matrix from the vertex program
+                let projection_uniform = material.pipeline().projection_uniform_location();
+                // Apply projection matrix to projection uniform
+                let mats = [self.projection];
+                material
+                    .pipeline()
+                    .vertex_program()
+                    .set_uniform_mat4f(projection_uniform, &mats);
+            }
+            if material
                 .pipeline()
-                .vertex_program()
-                .set_uniform_mat4f(projection_uniform, &mats);
+                .has_shader_feature(ShaderFeature::Transform)
+            {
+                // Get the location of the transform matrix from the vertex program
+                let transform_uniform = material.pipeline().transform_uniform_location();
+                // Apply view matrix to view uniform
+                let mats = [self.transform];
+                material
+                    .pipeline()
+                    .vertex_program()
+                    .set_uniform_mat4f(transform_uniform, &mats);
+            }
 
             // Bind the vertex array for drawing from its attached buffers
-            gl::BindVertexArray(vertex_array.handle());
+            material.bind_vertex_array(vertex_array);
 
             // Draw using the attached buffers
             gl::DrawArraysInstanced(

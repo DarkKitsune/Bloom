@@ -5,28 +5,29 @@ use std::ffi::{CStr, CString};
 
 const MAX_PROGRAM_INFO_LOG_SIZE: usize = 1024;
 const VERSION_NUMBER: &'static str = "#version 450";
-pub const FEATURE_VIEW_UNIFORM_NAME: &'static str = "_u_view";
-pub const FEATURE_PROJECTION_UNIFORM_NAME: &'static str = "_u_projection";
+pub const FEATURE_CAMERA_VIEW_UNIFORM_NAME: &'static str = "_u_view";
+pub const FEATURE_CAMERA_PROJECTION_UNIFORM_NAME: &'static str = "_u_projection";
+pub const FEATURE_TRANSFORM_UNIFORM_NAME: &'static str = "_u_transform";
 
 #[derive(Clone, Copy, Debug, PartialEq, Hash)]
 pub enum ShaderFeature {
-    View,
-    Projection,
+    Camera,
+    Transform,
 }
 
 impl ShaderFeature {
     fn from_name(name: impl AsRef<str>) -> Self {
         let name = name.as_ref();
         match name {
-            "view" => ShaderFeature::View,
-            "projection" => ShaderFeature::Projection,
+            "camera" => ShaderFeature::Camera,
+            "transform" => ShaderFeature::Transform,
             _ => panic!("Unknown shader feature {:?}", name),
         }
     }
 
     fn inserted_code(self) -> String {
         match self {
-            ShaderFeature::View => format!(
+            ShaderFeature::Camera => format!(
                 "
 uniform mat4 {0};
 mat4 applyView(mat4 a) {{
@@ -35,21 +36,25 @@ mat4 applyView(mat4 a) {{
 
 vec4 applyView(vec4 a) {{
     return {0} * a;
-}}",
-                FEATURE_VIEW_UNIFORM_NAME
-            ),
+}}
 
-            ShaderFeature::Projection => format!(
-                "
-uniform mat4 {0};
+uniform mat4 {1};
 mat4 applyProjection(mat4 a) {{
-    return {0} * a;
+    return {1} * a;
 }}
 
 vec4 applyProjection(vec4 a) {{
+    return {1} * a;
+}}",
+                FEATURE_CAMERA_VIEW_UNIFORM_NAME, FEATURE_CAMERA_PROJECTION_UNIFORM_NAME,
+            ),
+            ShaderFeature::Transform => format!(
+                "
+uniform mat4 {0};
+mat4 applyTransform(mat4 a) {{
     return {0} * a;
 }}",
-                FEATURE_PROJECTION_UNIFORM_NAME
+                FEATURE_TRANSFORM_UNIFORM_NAME,
             ),
         }
     }

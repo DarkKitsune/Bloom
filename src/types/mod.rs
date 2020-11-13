@@ -30,3 +30,6 @@ pub use program::*;
 
 mod pipeline;
 pub use pipeline::*;
+
+mod game_types;
+pub use game_types::*;

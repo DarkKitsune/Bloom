@@ -18,6 +18,8 @@ pub type Vec2i = fennec_algebra::Vector<i32, 2>;
 pub type Vec3i = fennec_algebra::Vector<i32, 3>;
 pub type Vec4i = fennec_algebra::Vector<i32, 4>;
 
+pub const DEBUG: bool = cfg!(debug_assertions);
+
 #[macro_export]
 macro_rules! init_array {
     ([$value_type:ty; $count:expr], mut $value_fn:expr) => {{

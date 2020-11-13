@@ -44,7 +44,7 @@ impl Window {
     }
 
     pub fn process_events(&mut self) {
-        if self.is_closed() {
+        if DEBUG && self.is_closed() {
             panic!("Window is not open");
         }
         for (_, event) in glfw::flush_messages(&self.event_receiver) {

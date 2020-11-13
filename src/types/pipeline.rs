@@ -38,14 +38,20 @@ impl Pipeline {
 
     pub fn view_uniform_location(&self) -> GLuint {
         self.vertex_program()
-            .uniform_location(FEATURE_VIEW_UNIFORM_NAME)
-            .expect("Vertex shader does not use the 'view' feature")
+            .uniform_location(FEATURE_CAMERA_VIEW_UNIFORM_NAME)
+            .expect("Vertex shader does not use the 'camera' feature")
     }
 
     pub fn projection_uniform_location(&self) -> GLuint {
         self.vertex_program()
-            .uniform_location(FEATURE_PROJECTION_UNIFORM_NAME)
-            .expect("Vertex shader does not use the 'projection' feature")
+            .uniform_location(FEATURE_CAMERA_PROJECTION_UNIFORM_NAME)
+            .expect("Vertex shader does not use the 'camera' feature")
+    }
+
+    pub fn transform_uniform_location(&self) -> GLuint {
+        self.vertex_program()
+            .uniform_location(FEATURE_TRANSFORM_UNIFORM_NAME)
+            .expect("Vertex shader does not use the 'transform' feature")
     }
 
     pub fn shader_features(&self) -> Vec<ShaderFeature> {
