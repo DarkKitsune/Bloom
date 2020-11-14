@@ -60,6 +60,8 @@ impl Material for HelloTriangleMaterial {
             ],
         ]
     }
+
+    fn _on_bind(&self) {}
 }
 
 impl Default for HelloTriangleMaterial {

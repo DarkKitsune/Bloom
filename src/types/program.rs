@@ -216,30 +216,32 @@ impl Program {
         // Create the shader program object
         let gl_handle = unsafe { gl::CreateShaderProgramv(stage.gl_enum(), 1, code_ptrs.as_ptr()) };
 
-        // Get the info log for the program
-        let mut length: GLsizei = 0;
-        let mut info_log: [GLchar; MAX_PROGRAM_INFO_LOG_SIZE] = [0; MAX_PROGRAM_INFO_LOG_SIZE];
-        unsafe {
-            gl::GetProgramInfoLog(
-                gl_handle,
-                MAX_PROGRAM_INFO_LOG_SIZE as GLsizei,
-                &mut length as *mut _,
-                info_log.as_mut_ptr(),
-            )
-        };
-
-        // Print the info log if it's not empty
-        if length > 0 {
-            let message_slice = unsafe {
-                std::slice::from_raw_parts(info_log.as_ptr() as *const u8, length as usize)
+        if DEBUG {
+            // Get the info log for the program
+            let mut length: GLsizei = 0;
+            let mut info_log: [GLchar; MAX_PROGRAM_INFO_LOG_SIZE] = [0; MAX_PROGRAM_INFO_LOG_SIZE];
+            unsafe {
+                gl::GetProgramInfoLog(
+                    gl_handle,
+                    MAX_PROGRAM_INFO_LOG_SIZE as GLsizei,
+                    &mut length as *mut _,
+                    info_log.as_mut_ptr(),
+                )
             };
-            let message_vec = message_slice.to_owned();
-            let message = CString::new(message_vec).unwrap();
-            println!(
-                "\x1B[35m{}\nShader code:\n{}\n\x1B[37m",
-                message.to_str().unwrap(),
-                generate_numbered_code(&code)
-            );
+
+            // Print the info log if it's not empty
+            if length > 0 {
+                let message_slice = unsafe {
+                    std::slice::from_raw_parts(info_log.as_ptr() as *const u8, length as usize)
+                };
+                let message_vec = message_slice.to_owned();
+                let message = CString::new(message_vec).unwrap();
+                println!(
+                    "\x1B[35m{}\nShader code:\n{}\n\x1B[37m",
+                    message.to_str().unwrap(),
+                    generate_numbered_code(&code)
+                );
+            }
         }
 
         Self {
@@ -273,6 +275,10 @@ impl Program {
                 mats.as_ptr() as *const _,
             )
         };
+    }
+
+    pub fn set_uniform_texture_unit(&self, location: GLuint, unit: GLuint) {
+        unsafe { gl::ProgramUniform1i(self.handle(), location as GLint, unit as GLint) };
     }
 
     pub fn shader_features(&self) -> &[ShaderFeature] {

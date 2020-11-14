@@ -56,7 +56,7 @@ impl GFX {
     }
 
     pub fn draw_indices(
-        &self,
+        &mut self,
         material: &impl Material,
         vertex_array: &VertexArray,
         instance_count: GLsizei,
@@ -76,9 +76,10 @@ impl GFX {
                 }
             }
 
-            // Bind the program pipeline of the material so we can render using the attached programs
-            gl::BindProgramPipeline(material.pipeline().handle());
+            // Bind the material
+            material.bind(vertex_array);
 
+            // Set uniforms according to parameters in this gfx object
             if material
                 .pipeline()
                 .has_shader_feature(ShaderFeature::Camera)
@@ -115,20 +116,14 @@ impl GFX {
                     .set_uniform_mat4f(transform_uniform, &mats);
             }
 
-            // Bind the vertex array for drawing from its attached buffers
-            material.bind_vertex_array(vertex_array);
-
             // Draw using the attached buffers
-            gl::DrawArraysInstanced(
-                gl::TRIANGLE_STRIP,
-                0,
+            gl::DrawElementsInstanced(
+                gl::TRIANGLES,
                 vertex_array.index_count() as GLsizei,
+                gl::UNSIGNED_INT,
+                std::ptr::null(),
                 instance_count,
             );
-
-            // Unbind stuff just in case; usually good practice
-            gl::BindVertexArray(0);
-            gl::BindProgramPipeline(0);
         }
     }
 

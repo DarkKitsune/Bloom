@@ -1,6 +1,6 @@
 use crate::*;
 
-enum VerificationFailure {
+pub enum VerificationFailure {
     BufferCount(usize),
     BufferAttributeCount(usize, usize),
     Attribute(usize, usize, VertexAttributeBinding),
@@ -10,6 +10,7 @@ pub trait Material {
     fn pipeline(&self) -> &Pipeline;
     fn pipeline_mut(&mut self) -> &mut Pipeline;
     fn vertex_attribute_bindings(&self) -> Vec<Vec<VertexAttributeBinding>>;
+    fn _on_bind(&self);
 
     fn verify_vertex_array(&self, vertex_array: &VertexArray) -> Option<VerificationFailure> {
         let own_bindings = self.vertex_attribute_bindings();
@@ -41,7 +42,7 @@ pub trait Material {
         None
     }
 
-    fn bind_vertex_array(&self, vertex_array: &VertexArray) {
+    fn bind(&self, vertex_array: &VertexArray) {
         if DEBUG {
             if let Some(failure) = self.verify_vertex_array(vertex_array) {
                 let failure_reason = match failure {
@@ -65,6 +66,11 @@ pub trait Material {
                 );
             }
         }
-        unsafe { gl::BindVertexArray(vertex_array.handle()) };
+
+        unsafe {
+            gl::BindVertexArray(vertex_array.handle());
+            gl::BindProgramPipeline(self.pipeline().handle());
+            self._on_bind();
+        }
     }
 }

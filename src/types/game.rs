@@ -7,8 +7,9 @@ pub struct Game {
     glfw: Glfw,
     window: Window,
     gfx: GFX,
-    hello_triangle_material: HelloTriangleMaterial,
-    hello_triangle_vertex_array: VertexArray,
+    test_texture: Texture<{ TextureType::Texture2D }>,
+    test_material: SpriteMaterial,
+    test_vertex_array: VertexArray,
 }
 
 impl Game {
@@ -23,48 +24,37 @@ impl Game {
         let gfx = GFX::new(&mut window);
 
         // Create core assets
-        // Material
-        let hello_triangle_material = HelloTriangleMaterial::new();
+        let mut test_texture = Texture::from_file("game/zor.png", image::ImageFormat::Png);
 
-        // Instance buffer
-        let hello_triangle_instances = Buffer::from_slice(
-            &[
-                InstanceModelVertex::new(vector!(-0.8, -0.8, 0.0), vector!(0.5, 0.5, 1.0)),
-                InstanceModelVertex::new(vector!(0.8, 0.8, 0.0), vector!(0.9, 0.9, 1.0)),
-            ],
-            false,
+        let mut test_material = SpriteMaterial::new();
+        test_material.set_texture(&test_texture);
+
+        let test_instance_buffer = VertexBufferBinding::new(
+            Box::new(Buffer::from_slice(
+                &[
+                    InstanceModelVertex::new(vector!(-0.8, -0.8, 0.0), vector!(0.5, 0.5, 1.0)),
+                    InstanceModelVertex::new(vector!(0.8, 0.8, 0.0), vector!(0.9, 0.9, 1.0)),
+                ],
+                false,
+            )),
+            1,
         );
 
-        // Vertex buffer
-        let hello_triangle_vertices = Buffer::from_slice(
-            &[
-                PosColorVertex::new(vector!(-1.0, -1.0, 0.0), vector!(1.0, 0.0, 0.0)),
-                PosColorVertex::new(vector!(1.0, -1.0, 0.0), vector!(0.0, 1.0, 0.0)),
-                PosColorVertex::new(vector!(0.0, 1.0, 0.0), vector!(0.0, 0.0, 1.0)),
-            ],
-            false,
+        let (test_vertex_buffer, test_index_buffer) = SpriteMaterial::create_vertex_index_buffers();
+
+        let test_vertex_array = VertexArray::new(
+            vec![test_instance_buffer, test_vertex_buffer],
+            test_index_buffer,
         );
-
-        // Instance & vertex buffers combined
-        let hello_triangle_vertex_bindings = vec![
-            VertexBufferBinding::new(Box::new(hello_triangle_instances), 1),
-            VertexBufferBinding::new(Box::new(hello_triangle_vertices), 0),
-        ];
-
-        // Index buffer
-        let hello_triangle_indices = Buffer::from_slice(&[0, 1, 2], false);
-
-        // Final vertex array
-        let hello_triangle_vertex_array =
-            VertexArray::new(hello_triangle_vertex_bindings, hello_triangle_indices);
 
         // Create game object
         let mut game = Game {
             glfw,
             window,
             gfx,
-            hello_triangle_material,
-            hello_triangle_vertex_array,
+            test_texture,
+            test_material,
+            test_vertex_array,
         };
 
         // Start the update loop
@@ -107,11 +97,8 @@ impl Game {
             );
 
             // Draw test triangles
-            self.gfx.draw_indices(
-                &self.hello_triangle_material,
-                &self.hello_triangle_vertex_array,
-                2,
-            );
+            self.gfx
+                .draw_indices(&self.test_material, &self.test_vertex_array, 2);
 
             // Swap window buffers
             self.window.swap_buffers();

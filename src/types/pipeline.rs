@@ -36,6 +36,20 @@ impl Pipeline {
             .expect("Pipeline does not have a vertex stage")
     }
 
+    pub fn fragment_program(&self) -> &Program {
+        self.stages
+            .iter()
+            .find(|e| e.stage() == ShaderStage::Fragment)
+            .expect("Pipeline does not have a fragment stage")
+    }
+
+    pub fn fragment_program_mut(&mut self) -> &mut Program {
+        self.stages
+            .iter_mut()
+            .find(|e| e.stage() == ShaderStage::Fragment)
+            .expect("Pipeline does not have a fragment stage")
+    }
+
     pub fn view_uniform_location(&self) -> GLuint {
         self.vertex_program()
             .uniform_location(FEATURE_CAMERA_VIEW_UNIFORM_NAME)
