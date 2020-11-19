@@ -1,36 +1,48 @@
 use crate::*;
 use std::mem::size_of;
+use std::rc::Rc;
 
+#[derive(Clone)]
 pub struct VertexBufferBinding {
-    buffer: Box<dyn DynVertexBuffer>,
+    buffer: Rc<dyn DynVertexBuffer>,
     divisor: GLuint,
 }
 
 impl VertexBufferBinding {
-    pub fn new(buffer: Box<dyn DynVertexBuffer>, divisor: GLuint) -> Self {
+    pub fn new(buffer: Rc<dyn DynVertexBuffer>, divisor: GLuint) -> Self {
         Self { buffer, divisor }
     }
 
-    pub fn buffer(&self) -> &Box<dyn DynVertexBuffer> {
+    pub fn buffer(&self) -> &Rc<dyn DynVertexBuffer> {
         &self.buffer
+    }
+}
+
+impl DynVertexBufferBinding for VertexBufferBinding {
+    fn buffer(&self) -> &dyn DynVertexBuffer {
+        self.buffer.as_ref()
+    }
+
+    fn divisor(&self) -> GLuint {
+        self.divisor
     }
 }
 
 pub struct VertexArray {
     gl_handle: IntHandle,
-    vertex_buffer_bindings: Vec<VertexBufferBinding>,
-    index_buffer: Buffer<GLuint>,
+    vertex_buffer_bindings: Vec<Box<dyn DynVertexBufferBinding>>,
+    index_buffer: Rc<Buffer<GLuint>>,
 }
 
 impl VertexArray {
     pub fn new(
-        vertex_buffer_bindings: impl IntoIterator<Item = VertexBufferBinding>,
-        index_buffer: Buffer<GLuint>,
+        vertex_buffer_bindings: impl IntoIterator<Item = Box<dyn DynVertexBufferBinding>>,
+        index_buffer: Rc<Buffer<GLuint>>,
     ) -> Self {
         // Collect vertex buffers into a vector
         let vertex_buffer_bindings = vertex_buffer_bindings
             .into_iter()
-            .collect::<Vec<VertexBufferBinding>>();
+            .collect::<Vec<Box<dyn DynVertexBufferBinding>>>();
 
         // We will receive the vertex array's handle in gl_handle
         let mut gl_handle: IntHandle = 0;
@@ -43,9 +55,9 @@ impl VertexArray {
                 gl::VertexArrayVertexBuffer(
                     gl_handle,
                     binding_idx as GLuint,
-                    binding.buffer.handle(),
+                    binding.buffer().handle(),
                     0,
-                    binding.buffer.element_size(),
+                    binding.buffer().element_size(),
                 );
             }
 
@@ -56,11 +68,11 @@ impl VertexArray {
             let mut attribute_idx = 0;
             for (binding_idx, binding) in vertex_buffer_bindings.iter().enumerate() {
                 // Set the divisor for this binding
-                gl::VertexArrayBindingDivisor(gl_handle, binding_idx as GLuint, binding.divisor);
+                gl::VertexArrayBindingDivisor(gl_handle, binding_idx as GLuint, binding.divisor());
 
                 // Next we will loop through all of the vertex attribute bindings provided by this binding's vertex buffer
                 let mut offset = 0;
-                for &binding in binding.buffer.vertex_attribute_bindings().iter() {
+                for &binding in binding.buffer().vertex_attribute_bindings().iter() {
                     for add in 0..binding.locations_used() {
                         // Enable this vertex attribute at the next unused location (attribute_idx)
                         gl::EnableVertexArrayAttrib(gl_handle, attribute_idx + add);
@@ -75,40 +87,18 @@ impl VertexArray {
 
                     // Set the format for this vertex attribute and increment offset based on the format's size
                     match binding {
-                        VertexAttributeBinding::PositionF3 => {
+                        VertexAttributeBinding::Float => {
                             gl::VertexArrayAttribFormat(
                                 gl_handle,
                                 attribute_idx,
-                                3,
+                                1,
                                 gl::FLOAT,
                                 gl::FALSE,
                                 offset,
                             );
-                            offset += size_of::<Vec3f>() as GLuint;
-                        }
-                        VertexAttributeBinding::NormalF3 => {
-                            gl::VertexArrayAttribFormat(
-                                gl_handle,
-                                attribute_idx,
-                                3,
-                                gl::FLOAT,
-                                gl::FALSE,
-                                offset,
-                            );
-                            offset += size_of::<Vec3f>() as GLuint;
-                        }
-                        VertexAttributeBinding::ColorF3 => {
-                            gl::VertexArrayAttribFormat(
-                                gl_handle,
-                                attribute_idx,
-                                3,
-                                gl::FLOAT,
-                                gl::FALSE,
-                                offset,
-                            );
-                            offset += size_of::<Vec3f>() as GLuint;
-                        }
-                        VertexAttributeBinding::TexCoordF2 => {
+                            offset += size_of::<f32>() as GLuint;
+                        },
+                        VertexAttributeBinding::Float2 => {
                             gl::VertexArrayAttribFormat(
                                 gl_handle,
                                 attribute_idx,
@@ -118,8 +108,30 @@ impl VertexArray {
                                 offset,
                             );
                             offset += size_of::<Vec2f>() as GLuint;
-                        }
-                        VertexAttributeBinding::Transform => {
+                        },
+                        VertexAttributeBinding::Float3 => {
+                            gl::VertexArrayAttribFormat(
+                                gl_handle,
+                                attribute_idx,
+                                3,
+                                gl::FLOAT,
+                                gl::FALSE,
+                                offset,
+                            );
+                            offset += size_of::<Vec3f>() as GLuint;
+                        },
+                        VertexAttributeBinding::Float4 => {
+                            gl::VertexArrayAttribFormat(
+                                gl_handle,
+                                attribute_idx,
+                                3,
+                                gl::FLOAT,
+                                gl::FALSE,
+                                offset,
+                            );
+                            offset += size_of::<Vec4f>() as GLuint;
+                        },
+                        VertexAttributeBinding::Mat4f => {
                             gl::VertexArrayAttribFormat(
                                 gl_handle,
                                 attribute_idx,
@@ -156,7 +168,7 @@ impl VertexArray {
                                 offset,
                             );
                             offset += size_of::<Vec4f>() as GLuint;
-                        }
+                        },
                     }
 
                     // Increment attribute_idx to use the next unused location for the next vertex attribute binding
@@ -179,12 +191,12 @@ impl VertexArray {
     pub fn max_instance_count(&self) -> Option<GLsizeiptr> {
         self.vertex_buffer_bindings
             .iter()
-            .filter(|binding| binding.divisor > 0)
-            .map(|binding| binding.buffer.length() * binding.divisor as GLsizeiptr)
+            .filter(|binding| binding.divisor() > 0)
+            .map(|binding| binding.buffer().length() * binding.divisor() as GLsizeiptr)
             .min()
     }
 
-    pub fn vertex_buffer_bindings(&self) -> &[VertexBufferBinding] {
+    pub fn vertex_buffer_bindings(&self) -> &[Box<dyn DynVertexBufferBinding>] {
         &self.vertex_buffer_bindings
     }
 }

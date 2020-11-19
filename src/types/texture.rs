@@ -115,6 +115,10 @@ impl<const TYPE: crate::TextureType> Texture<TYPE> {
             };
         }
     }
+
+    pub fn size(&self) -> Vec2u {
+        self.size
+    }
 }
 
 impl<const TYPE: crate::TextureType> GLHandle for Texture<TYPE> {

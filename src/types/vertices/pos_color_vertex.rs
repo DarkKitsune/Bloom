@@ -1,11 +1,12 @@
 use crate::*;
 
 const VERTEX_ATTRIBUTE_BINDINGS: [VertexAttributeBinding; 2] = [
-    VertexAttributeBinding::PositionF3,
-    VertexAttributeBinding::ColorF3,
+    VertexAttributeBinding::Float3,
+    VertexAttributeBinding::Float3,
 ];
 
 #[repr(C)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct PosColorVertex {
     position: Vec3f,
     color: Vec3f,
