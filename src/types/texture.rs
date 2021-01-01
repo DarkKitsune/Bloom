@@ -1,5 +1,6 @@
 use crate::*;
 use fennec_algebra::*;
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
@@ -17,13 +18,28 @@ impl TextureType {
     }
 }
 
+#[derive(Debug)]
 pub struct Texture<const TYPE: crate::TextureType> {
     gl_handle: IntHandle,
     size: Vec2u,
+    sprites: HashMap<String, Vec<Vec4f>>,
 }
 
 impl<const TYPE: crate::TextureType> Texture<TYPE> {
     pub fn new(size: Vec2u, count: i32) -> Vec<Self> {
+        // Check that the width and height are powers of 2
+        if DEBUG {
+            if !size[0].is_power_of_2() {
+                if !size[1].is_power_of_2() {
+                    panic!("Dimensions are not a power of 2");
+                }
+                panic!("Width is not a power of 2");
+            }
+            if !size[1].is_power_of_2() {
+                panic!("Height is not a power of 2");
+            }
+        }
+
         // Create handle array
         let mut handles = (0..count)
             .map(|_| Default::default())
@@ -46,18 +62,30 @@ impl<const TYPE: crate::TextureType> Texture<TYPE> {
 
         // Wrap the handles and return the wrappers
         handles
-            .iter()
-            .map(|&gl_handle| Self {
+            .drain(..)
+            .map(|gl_handle| Self {
                 gl_handle,
                 size: size,
+                sprites: HashMap::new(),
             })
             .collect()
+    }
+
+    pub fn from_bytes(bytes: &[u8], format: image::ImageFormat) -> Self {
+        let image = image::load_from_memory_with_format(bytes, format).unwrap();
+        let image = image.flipv().into_bgra();
+        let mut tex = Self::new(vector!(image.width(), image.height()), 1)
+            .pop()
+            .unwrap();
+        let data = image.into_raw();
+        tex.set_data_bytes(&data);
+        tex
     }
 
     pub fn from_file(path: impl AsRef<Path>, format: image::ImageFormat) -> Self {
         let file = BufReader::new(File::open(path).unwrap());
         let image = image::load(file, format).unwrap();
-        let image = image.into_bgra();
+        let image = image.flipv().into_bgra();
         let mut tex = Self::new(vector!(image.width(), image.height()), 1)
             .pop()
             .unwrap();
@@ -118,6 +146,17 @@ impl<const TYPE: crate::TextureType> Texture<TYPE> {
 
     pub fn size(&self) -> Vec2u {
         self.size
+    }
+
+    pub fn add_sprite_frames(&mut self, name: impl Into<String>, frames: impl Into<Vec<Vec4f>>) {
+        self.sprites.insert(name.into(), frames.into());
+    }
+
+    pub fn sprite_frames(&self, name: impl AsRef<str>) -> &[Vec4f] {
+        let name = name.as_ref();
+        self.sprites
+            .get(name)
+            .expect(&format!("No sprite exists with name {:?}", name))
     }
 }
 

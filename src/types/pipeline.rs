@@ -1,5 +1,7 @@
 use crate::*;
+use std::rc::Rc;
 
+#[derive(Debug)]
 pub struct Pipeline {
     gl_handle: IntHandle,
     stages: Vec<Program>,

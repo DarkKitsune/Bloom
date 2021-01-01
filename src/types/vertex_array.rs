@@ -1,25 +1,26 @@
 use crate::*;
+use std::cell::RefCell;
 use std::mem::size_of;
 use std::rc::Rc;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct VertexBufferBinding {
-    buffer: Rc<dyn DynVertexBuffer>,
+    buffer: Rc<RefCell<Box<dyn DynVertexBuffer>>>,
     divisor: GLuint,
 }
 
 impl VertexBufferBinding {
-    pub fn new(buffer: Rc<dyn DynVertexBuffer>, divisor: GLuint) -> Self {
+    pub fn new(buffer: Rc<RefCell<Box<dyn DynVertexBuffer>>>, divisor: GLuint) -> Self {
         Self { buffer, divisor }
     }
 
-    pub fn buffer(&self) -> &Rc<dyn DynVertexBuffer> {
+    pub fn buffer(&self) -> &Rc<RefCell<Box<dyn DynVertexBuffer>>> {
         &self.buffer
     }
 }
 
 impl DynVertexBufferBinding for VertexBufferBinding {
-    fn buffer(&self) -> &dyn DynVertexBuffer {
+    fn buffer(&self) -> &RefCell<Box<dyn DynVertexBuffer>> {
         self.buffer.as_ref()
     }
 
@@ -28,6 +29,7 @@ impl DynVertexBufferBinding for VertexBufferBinding {
     }
 }
 
+#[derive(Debug)]
 pub struct VertexArray {
     gl_handle: IntHandle,
     vertex_buffer_bindings: Vec<Box<dyn DynVertexBufferBinding>>,
@@ -55,9 +57,9 @@ impl VertexArray {
                 gl::VertexArrayVertexBuffer(
                     gl_handle,
                     binding_idx as GLuint,
-                    binding.buffer().handle(),
+                    binding.buffer().borrow().handle(),
                     0,
-                    binding.buffer().element_size(),
+                    binding.buffer().borrow().element_size(),
                 );
             }
 
@@ -72,7 +74,7 @@ impl VertexArray {
 
                 // Next we will loop through all of the vertex attribute bindings provided by this binding's vertex buffer
                 let mut offset = 0;
-                for &binding in binding.buffer().vertex_attribute_bindings().iter() {
+                for &binding in binding.buffer().borrow().vertex_attribute_bindings().iter() {
                     for add in 0..binding.locations_used() {
                         // Enable this vertex attribute at the next unused location (attribute_idx)
                         gl::EnableVertexArrayAttrib(gl_handle, attribute_idx + add);
@@ -97,7 +99,7 @@ impl VertexArray {
                                 offset,
                             );
                             offset += size_of::<f32>() as GLuint;
-                        },
+                        }
                         VertexAttributeBinding::Float2 => {
                             gl::VertexArrayAttribFormat(
                                 gl_handle,
@@ -108,7 +110,7 @@ impl VertexArray {
                                 offset,
                             );
                             offset += size_of::<Vec2f>() as GLuint;
-                        },
+                        }
                         VertexAttributeBinding::Float3 => {
                             gl::VertexArrayAttribFormat(
                                 gl_handle,
@@ -119,18 +121,18 @@ impl VertexArray {
                                 offset,
                             );
                             offset += size_of::<Vec3f>() as GLuint;
-                        },
+                        }
                         VertexAttributeBinding::Float4 => {
                             gl::VertexArrayAttribFormat(
                                 gl_handle,
                                 attribute_idx,
-                                3,
+                                4,
                                 gl::FLOAT,
                                 gl::FALSE,
                                 offset,
                             );
                             offset += size_of::<Vec4f>() as GLuint;
-                        },
+                        }
                         VertexAttributeBinding::Mat4f => {
                             gl::VertexArrayAttribFormat(
                                 gl_handle,
@@ -168,7 +170,18 @@ impl VertexArray {
                                 offset,
                             );
                             offset += size_of::<Vec4f>() as GLuint;
-                        },
+                        }
+                        VertexAttributeBinding::Int => {
+                            gl::VertexArrayAttribFormat(
+                                gl_handle,
+                                attribute_idx,
+                                1,
+                                gl::INT,
+                                gl::FALSE,
+                                offset,
+                            );
+                            offset += size_of::<GLint>() as GLuint;
+                        }
                     }
 
                     // Increment attribute_idx to use the next unused location for the next vertex attribute binding
@@ -192,12 +205,16 @@ impl VertexArray {
         self.vertex_buffer_bindings
             .iter()
             .filter(|binding| binding.divisor() > 0)
-            .map(|binding| binding.buffer().length() * binding.divisor() as GLsizeiptr)
+            .map(|binding| binding.buffer().borrow().length() * binding.divisor() as GLsizeiptr)
             .min()
     }
 
     pub fn vertex_buffer_bindings(&self) -> &[Box<dyn DynVertexBufferBinding>] {
         &self.vertex_buffer_bindings
+    }
+
+    pub fn vertex_buffer_bindings_mut(&mut self) -> &mut [Box<dyn DynVertexBufferBinding>] {
+        &mut self.vertex_buffer_bindings
     }
 }
 

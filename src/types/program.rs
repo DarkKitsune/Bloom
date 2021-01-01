@@ -13,6 +13,7 @@ pub const FEATURE_TRANSFORM_UNIFORM_NAME: &'static str = "_u_transform";
 pub enum ShaderFeature {
     Camera,
     Transform,
+    Noise,
 }
 
 impl ShaderFeature {
@@ -21,6 +22,7 @@ impl ShaderFeature {
         match name {
             "camera" => ShaderFeature::Camera,
             "transform" => ShaderFeature::Transform,
+            "noise" => ShaderFeature::Noise,
             _ => panic!("Unknown shader feature {:?}", name),
         }
     }
@@ -36,6 +38,22 @@ mat4 applyView(mat4 a) {{
 
 vec4 applyView(vec4 a) {{
     return {0} * a;
+}}
+
+vec3 camForward() {{
+    return -vec3({0}[0].z, {0}[1].z, {0}[2].z);
+}}
+
+vec3 camRight() {{
+    return vec3({0}[0].x, {0}[1].x, {0}[2].x);
+}}
+
+vec3 camUp() {{
+    return -vec3({0}[0].y, {0}[1].y, {0}[2].y);
+}}
+
+vec3 camPosition() {{
+    return -vec3({0}[0].w, {0}[1].w, {0}[2].w);
 }}
 
 uniform mat4 {1};
@@ -55,6 +73,72 @@ mat4 applyTransform(mat4 a) {{
     return {0} * a;
 }}",
                 FEATURE_TRANSFORM_UNIFORM_NAME,
+            ),
+            ShaderFeature::Noise => String::from("
+vec3 randomNormal(vec3 pos) {{
+    return normalize(vec3(
+        cos(pos.x * 2981.2412512 + sin(pos.y * 239.21585190 + cos(pos.z * 923.9287664) * 976.56895432) * 4574.9856189),
+        cos(pos.y * 8145.32161212 + sin(pos.z * 177.1658568 + cos(pos.x * 743.126898) * 7569.142156) * 4123.4584516),
+        cos(pos.z * 6354.862316 + sin(pos.x * 445.96213 + cos(pos.y * 512.458127845) * 4123.841261) * 865.622312)
+    ));
+}}
+
+vec3 cellPos(vec3 pos) {{
+    return vec3(floor(pos.x), floor(pos.y), floor(pos.z));
+}}
+
+float cellIntensity(vec3 pos, vec3 cellOffset) {{
+    vec3 cell = cellPos(pos) + cellOffset;
+    vec3 normal = randomNormal(cell);
+    float directionIntensity = (dot(pos - cell, normal) + 1.0) / 2.0;
+    float distanceIntensity = max(0.0, 1.0 - pow(length(pos - cell), 0.95));
+    return directionIntensity * distanceIntensity;
+}}
+
+float sigmoid(float x) {{
+    return 1.0 / (1.0 + exp(x * -15 + 7.5));
+}}
+
+float sampleNoise(vec3 sample_pos, float seed, float scale, int iterations) {{
+    float sum = 0.0;
+    float divider = 0.0;
+    for (int i = 0; i < iterations; i++) {{
+        float power = 1.0 / pow(1.4, i);
+        sample_pos += seed * 0.5;
+        float pos_scale = scale * pow(2.0, i);
+        vec3 pos = sample_pos * pos_scale;
+        sum +=
+            (cellIntensity(pos, vec3(-1.0, -1.0, -1.0)) +
+            cellIntensity(pos, vec3(-1.0, -1.0, 0.0)) +
+            cellIntensity(pos, vec3(-1.0, -1.0, 1.0)) +
+            cellIntensity(pos, vec3(-1.0, 0.0, -1.0)) +
+            cellIntensity(pos, vec3(-1.0, 0.0, 0.0)) +
+            cellIntensity(pos, vec3(-1.0, 0.0, 1.0)) +
+            cellIntensity(pos, vec3(-1.0, 1.0, -1.0)) +
+            cellIntensity(pos, vec3(-1.0, 1.0, 0.0)) +
+            cellIntensity(pos, vec3(-1.0, 1.0, 1.0)) +
+            cellIntensity(pos, vec3(0.0, -1.0, -1.0)) +
+            cellIntensity(pos, vec3(0.0, -1.0, 0.0)) +
+            cellIntensity(pos, vec3(0.0, -1.0, 1.0)) +
+            cellIntensity(pos, vec3(0.0, 0.0, -1.0)) +
+            cellIntensity(pos, vec3(0.0, 0.0, 0.0)) +
+            cellIntensity(pos, vec3(0.0, 0.0, 1.0)) +
+            cellIntensity(pos, vec3(0.0, 1.0, -1.0)) +
+            cellIntensity(pos, vec3(0.0, 1.0, 0.0)) +
+            cellIntensity(pos, vec3(0.0, 1.0, 1.0)) +
+            cellIntensity(pos, vec3(1.0, -1.0, -1.0)) +
+            cellIntensity(pos, vec3(1.0, -1.0, 0.0)) +
+            cellIntensity(pos, vec3(1.0, -1.0, 1.0)) +
+            cellIntensity(pos, vec3(1.0, 0.0, -1.0)) +
+            cellIntensity(pos, vec3(1.0, 0.0, 0.0)) +
+            cellIntensity(pos, vec3(1.0, 0.0, 1.0)) +
+            cellIntensity(pos, vec3(1.0, 1.0, -1.0)) +
+            cellIntensity(pos, vec3(1.0, 1.0, 0.0)) +
+            cellIntensity(pos, vec3(1.0, 1.0, 1.0))) * power;
+        divider += power;
+    }}
+    return sigmoid(sum / divider);
+}}",
             ),
         }
     }
@@ -193,6 +277,7 @@ impl ShaderStage {
     }
 }
 
+#[derive(Debug)]
 pub struct Program {
     gl_handle: IntHandle,
     stage: ShaderStage,

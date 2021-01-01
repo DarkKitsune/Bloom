@@ -1,0 +1,8 @@
+- Wherever an algorithm or action can be simplified, it has been
+- Every possible argument value either works or produces a helpful panic
+- Every group of related statements are preceded by comments (if not easily describable then that area of code needs to be reorganized or rewritten to be more clear)
+- Structs are used in place of primitive number types where possible (e.g. a SpriteReference holding an index into a sprite vector rather than the index itself)
+- Loops are substituted with a map or similar operation on an iterator, if possible
+- Every debug/sanity check is locked behind a condition checking if DEBUG is true, if possible
+- No variable or parameter is mutable longer than necessary
+- No unsafe block is open longer than necessary

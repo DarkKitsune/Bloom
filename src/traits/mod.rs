@@ -18,3 +18,6 @@ pub use dyn_vertex_buffer_map::*;
 
 mod dyn_vertex_buffer_binding;
 pub use dyn_vertex_buffer_binding::*;
+
+mod scene;
+pub use scene::*;

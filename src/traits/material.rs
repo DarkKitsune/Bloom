@@ -1,4 +1,5 @@
 use crate::*;
+use std::rc::Rc;
 
 pub enum VerificationFailure {
     BufferCount(usize),
@@ -6,9 +7,8 @@ pub enum VerificationFailure {
     Attribute(usize, usize, VertexAttributeBinding),
 }
 
-pub trait Material {
-    fn pipeline(&self) -> &Pipeline;
-    fn pipeline_mut(&mut self) -> &mut Pipeline;
+pub trait Material: std::fmt::Debug {
+    fn pipeline(&self) -> &Rc<Pipeline>;
     fn vertex_attribute_bindings(&self) -> Vec<Vec<VertexAttributeBinding>>;
     fn _on_bind(&self);
 
@@ -22,7 +22,7 @@ pub trait Material {
             .zip(vertex_array.vertex_buffer_bindings().iter())
             .enumerate()
         {
-            let b = b.buffer().vertex_attribute_bindings();
+            let b = b.buffer().borrow().vertex_attribute_bindings();
             if a.len() != b.len() {
                 return Some(VerificationFailure::BufferAttributeCount(
                     buffer_idx,

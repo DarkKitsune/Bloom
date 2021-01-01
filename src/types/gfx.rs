@@ -1,4 +1,6 @@
 use crate::*;
+use fennec_algebra::*;
+use std::cell::RefCell;
 use std::ffi::{c_void, CString};
 
 //const MAX_DEBUG_MESSAGES: usize = 10;
@@ -32,14 +34,31 @@ impl GFX {
         }
     }
 
-    pub fn clear_color(&self, framebuffer: &mut Framebuffer, clear_color: &Vec4f) {
+    pub fn clear_color(&mut self, framebuffer: &mut Framebuffer, clear_color: &Vec4f) {
         unsafe {
             gl::ClearNamedFramebufferfv(
                 framebuffer.handle(),
                 gl::COLOR,
                 0,
                 clear_color as *const Vec4f as *const _,
-            )
+            );
+        };
+    }
+
+    pub fn clear_depth_stencil(
+        &mut self,
+        framebuffer: &mut Framebuffer,
+        clear_depth: Option<GLfloat>,
+        clear_stencil: GLint,
+    ) {
+        unsafe {
+            gl::ClearNamedFramebufferfi(
+                framebuffer.handle(),
+                gl::DEPTH_STENCIL,
+                0,
+                clear_depth.unwrap_or(1.0),
+                clear_stencil,
+            );
         };
     }
 
@@ -51,16 +70,26 @@ impl GFX {
         self.view = view;
     }
 
+    pub fn view(&self) -> &Mat4f {
+        &self.view
+    }
+
     pub fn set_projection(&mut self, projection: Mat4f) {
         self.projection = projection;
     }
 
+    pub fn projection(&self) -> &Mat4f {
+        &self.projection
+    }
+
     pub fn draw_indices(
         &mut self,
-        material: &impl Material,
+        material: &RefCell<dyn Material>,
         vertex_array: &VertexArray,
         instance_count: GLsizei,
+        primitive_type: PrimitiveType,
     ) {
+        let material = material.borrow();
         unsafe {
             if DEBUG {
                 // Avoid trying to draw 0 instances
@@ -118,12 +147,164 @@ impl GFX {
 
             // Draw using the attached buffers
             gl::DrawElementsInstanced(
-                gl::TRIANGLES,
+                primitive_type.gl_primitive_mode(),
                 vertex_array.index_count() as GLsizei,
                 gl::UNSIGNED_INT,
                 std::ptr::null(),
                 instance_count,
             );
+        }
+    }
+
+    pub fn draw_indices_partial(
+        &mut self,
+        material: &RefCell<dyn Material>,
+        vertex_array: &VertexArray,
+        instance_count: GLsizei,
+        primitive_type: PrimitiveType,
+        index_count: GLsizei,
+    ) {
+        let material = material.borrow();
+        unsafe {
+            if DEBUG {
+                // Avoid trying to draw 0 instances
+                if instance_count < 1 {
+                    panic!("Must draw at least one instance");
+                }
+
+                // Don't allow drawing more instances than possible with the attached instance buffers (if any)
+                if let Some(max_instances) = vertex_array.max_instance_count() {
+                    if instance_count as GLsizeiptr > max_instances {
+                        panic!("Given instance count is too large to draw; at least one vertex buffer with an instance input rate is not large enough");
+                    }
+                }
+            }
+
+            // Bind the material
+            material.bind(vertex_array);
+
+            // Set uniforms according to parameters in this gfx object
+            if material
+                .pipeline()
+                .has_shader_feature(ShaderFeature::Camera)
+            {
+                // Get the location of the view matrix from the vertex program
+                let view_uniform = material.pipeline().view_uniform_location();
+                // Apply view matrix to view uniform
+                let mats = [self.view];
+                material
+                    .pipeline()
+                    .vertex_program()
+                    .set_uniform_mat4f(view_uniform, &mats);
+
+                // Get the location of the projection matrix from the vertex program
+                let projection_uniform = material.pipeline().projection_uniform_location();
+                // Apply projection matrix to projection uniform
+                let mats = [self.projection];
+                material
+                    .pipeline()
+                    .vertex_program()
+                    .set_uniform_mat4f(projection_uniform, &mats);
+            }
+            if material
+                .pipeline()
+                .has_shader_feature(ShaderFeature::Transform)
+            {
+                // Get the location of the transform matrix from the vertex program
+                let transform_uniform = material.pipeline().transform_uniform_location();
+                // Apply view matrix to view uniform
+                let mats = [self.transform];
+                material
+                    .pipeline()
+                    .vertex_program()
+                    .set_uniform_mat4f(transform_uniform, &mats);
+            }
+
+            // Draw using the attached buffers
+            gl::DrawElementsInstanced(
+                primitive_type.gl_primitive_mode(),
+                index_count,
+                gl::UNSIGNED_INT,
+                std::ptr::null(),
+                instance_count,
+            );
+        }
+    }
+
+    pub fn draw_mesh(&mut self, mesh: &Mesh, instance_count: GLsizei) {
+        self.draw_indices(
+            mesh.material(),
+            mesh.vertex_array(),
+            instance_count,
+            mesh.primitive_type(),
+        );
+    }
+
+    pub fn draw_mesh_partial(
+        &mut self,
+        mesh: &Mesh,
+        instance_count: GLsizei,
+        index_count: GLsizei,
+    ) {
+        self.draw_indices_partial(
+            mesh.material(),
+            mesh.vertex_array(),
+            instance_count,
+            mesh.primitive_type(),
+            index_count,
+        );
+    }
+
+    pub fn draw_model(&mut self, model: &Model, instance_count: GLsizei) {
+        for mesh in model.meshes() {
+            self.draw_mesh(mesh, instance_count);
+        }
+    }
+
+    pub fn draw_model_partial(
+        &mut self,
+        model: &Model,
+        instance_count: GLsizei,
+        index_count: GLsizei,
+    ) {
+        for mesh in model.meshes() {
+            self.draw_mesh_partial(mesh, instance_count, index_count);
+        }
+    }
+
+    pub fn depth_test(&mut self, enabled: bool) {
+        if enabled {
+            unsafe {
+                gl::Enable(gl::DEPTH_TEST);
+            }
+        } else {
+            unsafe {
+                gl::Disable(gl::DEPTH_TEST);
+            }
+        }
+    }
+
+    pub fn depth_write(&mut self, enabled: bool) {
+        if enabled {
+            unsafe {
+                gl::DepthMask(gl::TRUE);
+            }
+        } else {
+            unsafe {
+                gl::DepthMask(gl::FALSE);
+            }
+        }
+    }
+
+    pub fn cull(&mut self, enabled: bool) {
+        if enabled {
+            unsafe {
+                gl::Enable(gl::CULL_FACE);
+            }
+        } else {
+            unsafe {
+                gl::Disable(gl::CULL_FACE);
+            }
         }
     }
 
@@ -141,6 +322,13 @@ impl GFX {
             message_ptr = unsafe { message_ptr.add(length as usize) };
         }
     }*/
+
+    pub fn viewport(&mut self, viewport: Vec4i, set_scissor: bool) {
+        unsafe { gl::Viewport(*viewport.x(), *viewport.y(), *viewport.z(), *viewport.w()) };
+        if set_scissor {
+            unsafe { gl::Scissor(*viewport.x(), *viewport.y(), *viewport.z(), *viewport.w()) };
+        }
+    }
 }
 
 extern "system" fn debug_message_callback(

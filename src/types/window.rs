@@ -17,7 +17,7 @@ impl Window {
         glfw.window_hint(glfw::WindowHint::ContextVersion(4, 5));
         glfw.window_hint(glfw::WindowHint::OpenGlDebugContext(true));
         glfw.window_hint(glfw::WindowHint::OpenGlProfile(
-            glfw::OpenGlProfileHint::Core,
+            glfw::OpenGlProfileHint::Compat,
         ));
         glfw.window_hint(glfw::WindowHint::SRgbCapable(true));
 
@@ -43,7 +43,8 @@ impl Window {
         }
     }
 
-    pub fn process_events(&mut self) {
+    pub fn process_events(&mut self) -> Vec<glfw::WindowEvent> {
+        let mut events = Vec::new();
         if DEBUG && self.is_closed() {
             panic!("Window is not open");
         }
@@ -51,7 +52,7 @@ impl Window {
             //println!("Event: {:?}", event);
             match event {
                 glfw::WindowEvent::Close => self.closed = true,
-                _ => (),
+                event @ _ => events.push(event),
             }
         }
         if self.closed {
@@ -60,6 +61,7 @@ impl Window {
             window.expect("Window was None").close();
             println!("Closed GLFW window!");
         }
+        events
     }
 
     pub fn is_closed(&self) -> bool {
@@ -90,5 +92,12 @@ impl Window {
 
     pub fn aspect_ratio(&self) -> f32 {
         *self.size.x() as f32 / *self.size.y() as f32
+    }
+
+    pub fn set_title(&mut self, title: impl AsRef<str>) {
+        self.glfw_window
+            .as_mut()
+            .expect("Window was None")
+            .set_title(title.as_ref());
     }
 }

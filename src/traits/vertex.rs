@@ -7,6 +7,7 @@ pub enum VertexAttributeBinding {
     Float3,
     Float4,
     Mat4f,
+    Int,
 }
 
 impl VertexAttributeBinding {
@@ -17,6 +18,7 @@ impl VertexAttributeBinding {
             VertexAttributeBinding::Float3 => 1,
             VertexAttributeBinding::Float4 => 1,
             VertexAttributeBinding::Mat4f => 4,
+            VertexAttributeBinding::Int => 1,
         }
     }
 }

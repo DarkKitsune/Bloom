@@ -1,5 +1,6 @@
 use crate::*;
 use fennec_algebra::*;
+use std::cell::RefCell;
 use std::rc::Rc;
 
 const VERTEX_SHADER: &'static str = "
@@ -8,7 +9,7 @@ layout(location = 0) in vec2 i_position;
 layout(location = 1) in vec2 i_scale;
 layout(location = 2) in vec4 i_rotation;
 layout(location = 3) in vec4 i_rectangle;
-layout(location = 4) in vec3 v_position;
+layout(location = 4) in vec2 v_position;
 layout(location = 5) in vec2 v_texCoord;
 
 layout(location = 0) out vec2 f_texCoord;
@@ -26,7 +27,7 @@ void main()
         vec4(0.0, 0.0, 1.0, 0.0),
         vec4(i_position, 0.0, 1.0)
     );
-    gl_Position = applyProjection(applyView(i_matrix * vec4(v_position, 1.0)));
+    gl_Position = applyProjection(applyView(i_matrix * vec4(v_position, 0.0, 1.0)));
 }";
 
 const FRAGMENT_SHADER: &'static str = "
@@ -39,15 +40,16 @@ uniform sampler2D u_texture;
 
 void main()
 {
-    vec2 texCoord = f_rectangle.xy + f_texCoord * f_rectangle.zw;
+    vec2 texCoord = vec2(0.0, 1.0) + (f_rectangle.xy + f_texCoord * f_rectangle.zw) * vec2(1.0, -1.0);
     out_color = texture(u_texture, texCoord);
 }";
 
+#[derive(Clone, Debug)]
 pub struct SpriteMaterial {
-    pipeline: Pipeline,
-    texture: Option<Rc<Texture<{TextureType::Texture2D}>>>,
+    pipeline: Rc<Pipeline>,
+    texture: Option<Rc<Texture<{ TextureType::Texture2D }>>>,
     vertex_buffer: VertexBufferBinding,
-    index_buffer: Rc<Buffer<GLuint>>
+    index_buffer: Rc<Buffer<GLuint>>,
 }
 
 impl SpriteMaterial {
@@ -57,16 +59,21 @@ impl SpriteMaterial {
             Program::new(ShaderStage::Fragment, FRAGMENT_SHADER),
         ];
 
-        let pipeline = Pipeline::new(stages);
+        let pipeline = Rc::new(Pipeline::new(stages));
 
         let vertices = [
-            PosTexVertex::new(vector!(-0.5, -0.5, 0.0), vector!(0.0, 0.0)),
-            PosTexVertex::new(vector!(0.5, -0.5, 0.0), vector!(1.0, 0.0)),
-            PosTexVertex::new(vector!(0.5, 0.5, 0.0), vector!(1.0, 1.0)),
-            PosTexVertex::new(vector!(-0.5, 0.5, 0.0), vector!(0.0, 1.0)),
+            Pos2TexVertex::new(vector!(-0.5, -0.5), vector!(0.0, 0.0)),
+            Pos2TexVertex::new(vector!(0.5, -0.5), vector!(1.0, 0.0)),
+            Pos2TexVertex::new(vector!(0.5, 0.5), vector!(1.0, 1.0)),
+            Pos2TexVertex::new(vector!(-0.5, 0.5), vector!(0.0, 1.0)),
         ];
         let indices = [0, 1, 2, 0, 2, 3];
-        let vertex_buffer = VertexBufferBinding::new(Rc::new(Buffer::from_slice(&vertices, false, false)), 0);
+        let vertex_buffer = VertexBufferBinding::new(
+            Rc::new(RefCell::new(Box::new(Buffer::from_slice(
+                &vertices, false, false,
+            )))),
+            0,
+        );
         let index_buffer = Rc::new(Buffer::from_slice(&indices, false, false));
 
         Self {
@@ -77,29 +84,22 @@ impl SpriteMaterial {
         }
     }
 
-    pub fn texture(&self) -> Option<Rc<Texture<{TextureType::Texture2D}>>> {
-        self.texture.clone()
+    pub fn texture(&self) -> Option<&Rc<Texture<{ TextureType::Texture2D }>>> {
+        self.texture.as_ref()
     }
 
     pub fn set_texture(&mut self, texture: Rc<Texture<{ TextureType::Texture2D }>>) {
         self.texture = Some(texture);
     }
 
-    pub fn create_vertex_index_buffers(&self) -> (VertexBufferBinding, Rc<Buffer<GLuint>>) {
-        (
-            self.vertex_buffer.clone(),
-            self.index_buffer.clone(),
-        )
+    pub fn get_vertex_index_buffers(&self) -> (VertexBufferBinding, Rc<Buffer<GLuint>>) {
+        (self.vertex_buffer.clone(), self.index_buffer.clone())
     }
 }
 
 impl Material for SpriteMaterial {
-    fn pipeline(&self) -> &Pipeline {
+    fn pipeline(&self) -> &Rc<Pipeline> {
         &self.pipeline
-    }
-
-    fn pipeline_mut(&mut self) -> &mut Pipeline {
-        &mut self.pipeline
     }
 
     fn vertex_attribute_bindings(&self) -> Vec<Vec<VertexAttributeBinding>> {
@@ -111,7 +111,7 @@ impl Material for SpriteMaterial {
                 VertexAttributeBinding::Float4,
             ],
             vec![
-                VertexAttributeBinding::Float3,
+                VertexAttributeBinding::Float2,
                 VertexAttributeBinding::Float2,
             ],
         ]
@@ -119,10 +119,13 @@ impl Material for SpriteMaterial {
 
     fn _on_bind(&self) {
         let frag_program = self.pipeline().fragment_program();
-        let texture_location = frag_program.uniform_location("u_texture").unwrap();
-        frag_program.set_uniform_texture_unit(texture_location, 0);
-
-        unsafe { gl::BindTextureUnit(0, self.texture.as_ref().expect("Texture not set").handle()) };
+        let texture_location = frag_program.uniform_location("u_texture");
+        if let Some(texture_location) = texture_location {
+            frag_program.set_uniform_texture_unit(texture_location, 0);
+            unsafe {
+                gl::BindTextureUnit(0, self.texture.as_ref().expect("Texture not set").handle())
+            };
+        }
     }
 }
 

@@ -1,19 +1,24 @@
 use fennec_algebra::*;
 use glfw::Glfw;
+use std::cell::RefCell;
 use std::rc::Rc;
-use std::time::{Instant, Duration};
+use std::time::Instant;
 
 use crate::*;
 
-pub const FRAMERATE: f64 = 60.0;
+pub const SMOOTHED_FRAMERATE_SAMPLES: usize = 5;
+pub const FOV: f32 = 90.0 * std::f32::consts::PI / 180.0;
 
 pub struct Game {
     glfw: Glfw,
     window: Window,
     gfx: GFX,
-    bullet_list: BulletList,
+    input: Input,
     start_instant: Instant,
     previous_frame_instant: Instant,
+    smoothed_framerate: f64,
+    task_schedule: Option<TaskSchedule>,
+    current_scene: Option<Box<dyn Scene>>,
 }
 
 impl Game {
@@ -26,17 +31,15 @@ impl Game {
 
         // Create GFX object
         let gfx = GFX::new(&mut window);
+        glfw.set_swap_interval(glfw::SwapInterval::Sync(1));
 
-        // Create core assets
-        let test_texture = Texture::from_file("game/zor.png", image::ImageFormat::Png);
+        // Create input handler
+        let mut input = Input::new(11);
+        input.use_default_key_bindings();
 
-        let mut test_material = SpriteMaterial::new();
-        test_material.set_texture(Rc::new(test_texture));
+        // Create task schedule
+        let mut task_schedule = TaskSchedule::new();
 
-        let mut bullet_list = BulletList::new(Rc::new(test_material));
-        bullet_list.push(Bullet::new(vector!(0.0, 0.0), vector!(1.0, 1.0), vector!(5.0, 0.0), vector!(0.0, 0.0, 0.2, 0.2)));
-        bullet_list.push(Bullet::new(vector!(100.0, 0.0), vector!(1.0, 1.0), vector!(0.0, 5.0), vector!(3.0, 0.0, 0.2, 0.2)));
-        
         // Get the current time
         let start_instant = Instant::now();
 
@@ -45,9 +48,12 @@ impl Game {
             glfw,
             window,
             gfx,
-            bullet_list,
+            input,
             start_instant,
             previous_frame_instant: start_instant.clone(),
+            smoothed_framerate: 0.0,
+            task_schedule: Some(task_schedule),
+            current_scene: Some(Box::new(ShooterScene::new())),
         };
 
         // Start the update loop
@@ -56,46 +62,110 @@ impl Game {
 
     fn update_loop(&mut self) {
         loop {
+            // Copy all input states to previous states
+            self.input.copy_state_to_previous();
+
             // Poll GLFW events
             Window::poll_events(&mut self.glfw);
             // Process events for the window
-            self.window.process_events();
+            let events = self.window.process_events();
+            // Handle key events
+            for event in events {
+                match event {
+                    glfw::WindowEvent::Key(key, _, action, _) => match action {
+                        glfw::Action::Press => {
+                            self.input.set_key_state(key, true);
+                            let mut scene = None;
+                            std::mem::swap(&mut self.current_scene, &mut scene);
+                            scene.as_mut().unwrap().event_key(self, key, true);
+                            std::mem::swap(&mut self.current_scene, &mut scene);
+                        }
+                        glfw::Action::Release => {
+                            self.input.set_key_state(key, false);
+                            let mut scene = None;
+                            std::mem::swap(&mut self.current_scene, &mut scene);
+                            scene.as_mut().unwrap().event_key(self, key, false);
+                            std::mem::swap(&mut self.current_scene, &mut scene);
+                        }
+                        _ => (),
+                    },
+                    _ => (),
+                }
+            }
 
             // Exit the loop if the window is closed, otherwise continue
             if self.window.is_closed() {
                 break;
             }
 
-            std::thread::sleep(Duration::from_secs_f64(1.0 / FRAMERATE));
-
             // Get the current time and compute delta time (the time passed since the previous frame)
             let now = Instant::now();
-            let delta_time = now.duration_since(self.previous_frame_instant).as_secs_f32().max(0.00001);
+            let current_time = now.duration_since(self.start_instant).as_secs_f64();
+            let delta_time = now
+                .duration_since(self.previous_frame_instant)
+                .as_secs_f64()
+                .max(0.00001);
             self.previous_frame_instant = now;
 
-            // Clear buffer
-            self.gfx
-                .clear_color(&mut window_framebuffer(), &vector!(1.0, 0.0, 0.5, 1.0));
+            // Calculate the smoothed framerate
+            self.smoothed_framerate = (self.smoothed_framerate
+                * (SMOOTHED_FRAMERATE_SAMPLES - 1) as f64
+                + 1.0 / delta_time)
+                / SMOOTHED_FRAMERATE_SAMPLES as f64;
+            self.window
+                .set_title(format!("FPS: {:.1}", self.smoothed_framerate));
 
-            // Set the camera
-            self.gfx.set_view(
-                Mat4f::view(
-                    vector!(0.0, 0.0, -1.0),
-                    vector!(0.0, 0.0, 0.0),
-                    vector!(0.0, -1.0, 0.0),
-                )
-                .unwrap(),
-            );
-            self.gfx.set_projection(
-                Mat4f::ortho(vector!(self.window.size()[0] as f32, self.window.size()[1] as f32), 0.00001, 1.0),
-            );
+            // Do tasks
+            // Swap out task schedule so that we can borrow this game object while executing tasks
+            let mut temp_ts = None;
+            std::mem::swap(&mut temp_ts, &mut self.task_schedule);
+            // Execute tasks
+            temp_ts
+                .as_mut()
+                .unwrap()
+                .execute(self, delta_time, current_time);
+            // Swap task schedule back into the game object
+            std::mem::swap(&mut temp_ts, &mut self.task_schedule);
 
-            // Update and draw the bullet list
-            self.bullet_list.update(delta_time);
-            self.bullet_list.draw(&mut self.gfx, now.duration_since(self.start_instant).as_secs_f64());
+            let mut scene = None;
+            std::mem::swap(&mut self.current_scene, &mut scene);
+
+            // Do update
+            scene
+                .as_mut()
+                .unwrap()
+                .event_update(self, delta_time, current_time);
+
+            // Do draw
+            scene
+                .as_mut()
+                .unwrap()
+                .event_draw(self, delta_time, current_time);
+
+            std::mem::swap(&mut self.current_scene, &mut scene);
 
             // Swap window buffers
             self.window.swap_buffers();
         }
+    }
+
+    pub fn input(&self) -> &Input {
+        &self.input
+    }
+
+    pub fn input_mut(&mut self) -> &mut Input {
+        &mut self.input
+    }
+
+    pub fn gfx(&self) -> &GFX {
+        &self.gfx
+    }
+
+    pub fn gfx_mut(&mut self) -> &mut GFX {
+        &mut self.gfx
+    }
+
+    pub fn window(&self) -> &Window {
+        &self.window
     }
 }

@@ -10,6 +10,9 @@ pub use types::*;
 mod util;
 pub use util::*;
 
+mod game_types;
+pub use game_types::*;
+
 fn main() {
     Game::start();
 }
