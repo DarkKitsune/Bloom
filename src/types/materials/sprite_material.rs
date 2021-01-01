@@ -3,7 +3,7 @@ use fennec_algebra::*;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-const VERTEX_SHADER: &'static str = "
+const VERTEX_SHADER: &str = "
 #[feature(camera)]
 layout(location = 0) in vec2 i_position;
 layout(location = 1) in vec2 i_scale;
@@ -30,7 +30,7 @@ void main()
     gl_Position = applyProjection(applyView(i_matrix * vec4(v_position, 0.0, 1.0)));
 }";
 
-const FRAGMENT_SHADER: &'static str = "
+const FRAGMENT_SHADER: &str = "
 layout(location = 0) in vec2 f_texCoord;
 layout(location = 1) in vec4 f_rectangle;
 
@@ -49,7 +49,7 @@ pub struct SpriteMaterial {
     pipeline: Rc<Pipeline>,
     texture: Option<Rc<Texture<{ TextureType::Texture2D }>>>,
     vertex_buffer: VertexBufferBinding,
-    index_buffer: Rc<Buffer<GLuint>>,
+    index_buffer: Rc<Buffer>,
 }
 
 impl SpriteMaterial {
@@ -68,10 +68,8 @@ impl SpriteMaterial {
             Pos2TexVertex::new(vector!(-0.5, 0.5), vector!(0.0, 1.0)),
         ];
         let indices = [0, 1, 2, 0, 2, 3];
-        let vertex_buffer = VertexBufferBinding::new(
-            Rc::new(RefCell::new(Box::new(Buffer::from_slice(
-                &vertices, false, false,
-            )))),
+        let vertex_buffer = VertexBufferBinding::new::<Pos2TexVertex>(
+            Rc::new(RefCell::new(Buffer::from_slice(&vertices, false, false))),
             0,
         );
         let index_buffer = Rc::new(Buffer::from_slice(&indices, false, false));
@@ -92,7 +90,7 @@ impl SpriteMaterial {
         self.texture = Some(texture);
     }
 
-    pub fn get_vertex_index_buffers(&self) -> (VertexBufferBinding, Rc<Buffer<GLuint>>) {
+    pub fn get_vertex_index_buffers(&self) -> (VertexBufferBinding, Rc<Buffer>) {
         (self.vertex_buffer.clone(), self.index_buffer.clone())
     }
 }

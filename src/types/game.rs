@@ -1,7 +1,5 @@
 use fennec_algebra::*;
 use glfw::Glfw;
-use std::cell::RefCell;
-use std::rc::Rc;
 use std::time::Instant;
 
 use crate::*;
@@ -38,7 +36,7 @@ impl Game {
         input.use_default_key_bindings();
 
         // Create task schedule
-        let mut task_schedule = TaskSchedule::new();
+        let task_schedule = TaskSchedule::new();
 
         // Get the current time
         let start_instant = Instant::now();
@@ -50,7 +48,7 @@ impl Game {
             gfx,
             input,
             start_instant,
-            previous_frame_instant: start_instant.clone(),
+            previous_frame_instant: start_instant,
             smoothed_framerate: 0.0,
             task_schedule: Some(task_schedule),
             current_scene: Some(Box::new(ShooterScene::new())),
@@ -70,6 +68,7 @@ impl Game {
             // Process events for the window
             let events = self.window.process_events();
             // Handle key events
+            #[allow(clippy::single_match)]
             for event in events {
                 match event {
                     glfw::WindowEvent::Key(key, _, action, _) => match action {

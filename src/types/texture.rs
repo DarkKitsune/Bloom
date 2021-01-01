@@ -65,7 +65,7 @@ impl<const TYPE: crate::TextureType> Texture<TYPE> {
             .drain(..)
             .map(|gl_handle| Self {
                 gl_handle,
-                size: size,
+                size,
                 sprites: HashMap::new(),
             })
             .collect()
@@ -156,7 +156,7 @@ impl<const TYPE: crate::TextureType> Texture<TYPE> {
         let name = name.as_ref();
         self.sprites
             .get(name)
-            .expect(&format!("No sprite exists with name {:?}", name))
+            .unwrap_or_else(|| panic!("No sprite exists with name {:?}", name))
     }
 }
 

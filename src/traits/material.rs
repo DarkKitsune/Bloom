@@ -22,7 +22,7 @@ pub trait Material: std::fmt::Debug {
             .zip(vertex_array.vertex_buffer_bindings().iter())
             .enumerate()
         {
-            let b = b.buffer().borrow().vertex_attribute_bindings();
+            let b = b.vertex_attribute_bindings();
             if a.len() != b.len() {
                 return Some(VerificationFailure::BufferAttributeCount(
                     buffer_idx,
@@ -30,7 +30,7 @@ pub trait Material: std::fmt::Debug {
                 ));
             }
             for (attribute_idx, (binding_a, binding_b)) in a.iter().zip(b.iter()).enumerate() {
-                if binding_a != binding_a {
+                if binding_a != binding_b {
                     return Some(VerificationFailure::Attribute(
                         buffer_idx,
                         attribute_idx,

@@ -1,7 +1,5 @@
 use crate::*;
 use fennec_algebra::*;
-use std::cell::RefCell;
-use std::rc::Rc;
 
 pub struct Player {
     sprite_reference: SpriteReference,
@@ -34,7 +32,6 @@ impl Player {
         &mut self, /*, game: &mut Game*/
         sprite_list: &mut SpriteList,
         delta_time: f64,
-        current_time: f64,
     ) {
         self.phys_base.update(delta_time);
         sprite_list.change_sprite(&self.sprite_reference, |sprite| {

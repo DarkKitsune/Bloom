@@ -1,5 +1,4 @@
 use crate::*;
-use fennec_algebra::*;
 
 pub struct PhysicsObjectBase {
     position: Vec3f,

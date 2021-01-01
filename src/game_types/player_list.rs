@@ -45,13 +45,13 @@ impl PlayerList {
         self.players.push(player);
     }
 
-    pub fn update(&mut self, _game: &mut Game, delta_time: f64, current_time: f64) {
+    pub fn update(&mut self, _game: &mut Game, delta_time: f64) {
         for player in self.players.iter_mut() {
-            player.update(&mut self.sprite_list, delta_time, current_time);
+            player.update(&mut self.sprite_list, delta_time);
         }
     }
 
-    pub fn draw(&mut self, gfx: &mut GFX, delta_time: f64, current_time: f64) {
+    pub fn draw(&mut self, gfx: &mut GFX) {
         self.sprite_list.draw(gfx);
     }
 }

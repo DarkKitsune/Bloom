@@ -1,5 +1,4 @@
 use crate::*;
-use std::rc::Rc;
 
 #[derive(Debug)]
 pub struct Pipeline {
@@ -83,8 +82,7 @@ impl Pipeline {
             .iter()
             .map(|stage| stage.shader_features().iter().cloned())
             .flatten()
-            .find(|&e| e == feature)
-            .is_some()
+            .any(|e| e == feature)
     }
 }
 

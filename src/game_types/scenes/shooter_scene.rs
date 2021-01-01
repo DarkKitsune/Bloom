@@ -1,8 +1,6 @@
 use crate::*;
 use fennec_algebra::*;
 use glfw::Key;
-use std::cell::RefCell;
-use std::rc::Rc;
 
 const STARTING_FIELD_SIZE: Vec3f = vector!(2.0, 2.0, 2.0);
 const STARTING_FIELD_VIEWPORT: Vec4f = vector!(0.05, 0.05, 0.75, 0.9);
@@ -29,14 +27,14 @@ impl ShooterScene {
 }
 
 impl Scene for ShooterScene {
-    fn event_start(&mut self, game: &mut Game, delta_time: f64, current_time: f64) {}
+    fn event_start(&mut self, _game: &mut Game) {}
 
-    fn event_update(&mut self, game: &mut Game, delta_time: f64, current_time: f64) {
+    fn event_update(&mut self, game: &mut Game, delta_time: f64, _current_time: f64) {
         // Update player
-        self.player_list.update(game, delta_time, current_time);
+        self.player_list.update(game, delta_time);
     }
 
-    fn event_draw(&mut self, game: &mut Game, delta_time: f64, current_time: f64) {
+    fn event_draw(&mut self, game: &mut Game, _delta_time: f64, _current_time: f64) {
         let window_size = game.window().size();
 
         // Clear buffer
@@ -74,11 +72,10 @@ impl Scene for ShooterScene {
         ));
 
         // Draw player
-        self.player_list
-            .draw(game.gfx_mut(), delta_time, current_time);
+        self.player_list.draw(game.gfx_mut());
     }
 
-    fn event_key(&mut self, game: &mut Game, key: Key, pressed: bool) {}
+    fn event_key(&mut self, _game: &mut Game, _key: Key, _pressed: bool) {}
 }
 
 impl Default for ShooterScene {

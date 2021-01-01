@@ -1,25 +1,19 @@
 use crate::*;
-use std::ffi::c_void;
 use std::iter::FromIterator;
 use std::marker::PhantomData;
 use std::mem::size_of;
 use std::ops::{Bound, Index, IndexMut, Range, RangeBounds};
 
-pub struct BufferMap<T: Sized + Copy> {
+pub struct BufferMap<T: Sized> {
     _phantom_data: PhantomData<T>,
     buffer: IntHandle,
-    ptr: *mut c_void,
+    ptr: *mut T,
     range: Range<GLsizeiptr>,
     access_flags: GLenum,
 }
 
-impl<T: Sized + Copy> BufferMap<T> {
-    fn new(
-        buffer: &Buffer<T>,
-        ptr: *mut c_void,
-        range: Range<GLsizeiptr>,
-        access_flags: GLenum,
-    ) -> Self {
+impl<T: Sized> BufferMap<T> {
+    fn new(buffer: &Buffer, ptr: *mut T, range: Range<GLsizeiptr>, access_flags: GLenum) -> Self {
         Self {
             _phantom_data: PhantomData,
             buffer: buffer.handle(),
@@ -29,73 +23,69 @@ impl<T: Sized + Copy> BufferMap<T> {
         }
     }
 
-    unsafe fn element_ptr<P: Sized>(&self, idx: usize) -> *const P {
+    fn element_ptr(&self, idx: usize) -> *const T {
         if DEBUG && idx > (self.range.end - self.range.start) as usize {
             panic!("Offset is outside mapped range {:?}", self.range);
         }
 
-        (self.ptr as *const P).add(idx)
+        unsafe { self.ptr.add(idx) }
     }
 
-    unsafe fn element_ptr_mut<P: Sized>(&self, idx: usize) -> *mut P {
+    fn element_ptr_mut(&mut self, idx: usize) -> *mut T {
         if DEBUG && idx > (self.range.end - self.range.start) as usize {
             panic!("Offset is outside mapped range {:?}", self.range);
         }
 
-        (self.ptr as *mut P).add(idx)
+        unsafe { self.ptr.add(idx) }
     }
 
     pub fn unmap(self) {}
+
+    pub fn can_read(&self) -> bool {
+        (self.access_flags & gl::MAP_READ_BIT) > 0
+    }
+
+    pub fn can_write(&self) -> bool {
+        (self.access_flags & gl::MAP_WRITE_BIT) > 0
+    }
 }
 
-impl<T: Sized + Copy> Drop for BufferMap<T> {
+impl<T: Sized> Drop for BufferMap<T> {
     fn drop(&mut self) {
         unsafe { gl::UnmapNamedBuffer(self.buffer) };
     }
 }
 
-impl<T: Sized + Copy> Index<usize> for BufferMap<T> {
+impl<T: Sized> Index<usize> for BufferMap<T> {
     type Output = T;
 
     fn index(&self, idx: usize) -> &T {
+        if DEBUG && !self.can_read() {
+            panic!("Buffer access flags do not allow reading");
+        }
         unsafe { &*self.element_ptr(idx) }
     }
 }
 
-impl<T: Sized + Copy> IndexMut<usize> for BufferMap<T> {
+impl<T: Sized> IndexMut<usize> for BufferMap<T> {
     fn index_mut(&mut self, idx: usize) -> &mut T {
+        if DEBUG && !self.can_write() {
+            panic!("Buffer access flags do not allow writing");
+        }
         unsafe { &mut *self.element_ptr_mut(idx) }
     }
 }
 
-impl<T: Sized + Copy + Vertex> DynVertexBufferMap for BufferMap<T> {
-    fn buffer_handle(&self) -> IntHandle {
-        self.buffer
-    }
-
-    fn element_size(&self) -> usize {
-        std::mem::size_of::<T>()
-    }
-
-    fn range(&self) -> Range<GLsizeiptr> {
-        self.range.clone()
-    }
-
-    fn ptr(&self) -> *const c_void {
-        self.ptr
-    }
-}
-
 #[derive(Debug)]
-pub struct Buffer<T: Sized + Copy> {
-    _phantom_data: PhantomData<T>,
+pub struct Buffer {
     gl_handle: IntHandle,
     access_flags: GLenum,
     length: GLsizeiptr,
+    element_size: usize,
 }
 
-impl<T: Sized + Copy> Buffer<T> {
-    pub fn new(length: GLsizeiptr, allow_map_read: bool, allow_map_write: bool) -> Self {
+impl Buffer {
+    pub fn new<T: Sized>(length: GLsizeiptr, allow_map_read: bool, allow_map_write: bool) -> Self {
         // Choose access flags for what we need
         let access_flags = choose_access_flags(allow_map_read, allow_map_write);
 
@@ -114,14 +104,18 @@ impl<T: Sized + Copy> Buffer<T> {
         }
 
         Self {
-            _phantom_data: PhantomData,
             gl_handle,
             access_flags,
             length,
+            element_size: size_of::<T>(),
         }
     }
 
-    pub fn from_slice(initial_data: &[T], allow_map_read: bool, allow_map_write: bool) -> Self {
+    pub fn from_slice<T: Sized>(
+        initial_data: &[T],
+        allow_map_read: bool,
+        allow_map_write: bool,
+    ) -> Self {
         // Choose access flags for what we need
         let access_flags = choose_access_flags(allow_map_read, allow_map_write);
 
@@ -140,14 +134,14 @@ impl<T: Sized + Copy> Buffer<T> {
         }
 
         Self {
-            _phantom_data: PhantomData,
             gl_handle,
             access_flags,
             length: initial_data.len() as GLsizeiptr,
+            element_size: size_of::<T>(),
         }
     }
 
-    pub fn from_iterator(
+    pub fn from_iterator<T: Sized>(
         initial_data: impl IntoIterator<Item = T>,
         allow_map_read: bool,
         allow_map_write: bool,
@@ -162,12 +156,21 @@ impl<T: Sized + Copy> Buffer<T> {
         self.length
     }
 
-    pub fn map(&self, range: impl RangeBounds<GLsizeiptr>) -> BufferMap<T> {
+    pub fn element_size(&self) -> usize {
+        self.element_size
+    }
+
+    pub fn map<T: Sized>(&self, range: impl RangeBounds<GLsizeiptr>) -> BufferMap<T> {
         if DEBUG {
             if (self.access_flags & gl::MAP_READ_BIT) == 0
                 && (self.access_flags & gl::MAP_WRITE_BIT) == 0
             {
                 panic!("Cannot read or write to the buffer");
+            }
+            if std::mem::size_of::<T>() != self.element_size {
+                panic!(
+                    "Size of T is not the same as the size of T which the buffer was created with"
+                );
             }
         }
 
@@ -193,35 +196,17 @@ impl<T: Sized + Copy> Buffer<T> {
             )
         };
 
-        BufferMap::<T>::new(self, ptr, range, self.access_flags)
+        BufferMap::<T>::new(self, ptr as *mut T, range, self.access_flags)
     }
 }
 
-impl<T: Sized + Copy> GLHandle for Buffer<T> {
+impl GLHandle for Buffer {
     fn handle(&self) -> IntHandle {
         self.gl_handle
     }
 }
 
-impl<T: Sized + Copy + Vertex + std::fmt::Debug + 'static> DynVertexBuffer for Buffer<T> {
-    fn element_size(&self) -> GLsizei {
-        size_of::<T>() as GLsizei
-    }
-
-    fn vertex_attribute_bindings(&self) -> &'static [VertexAttributeBinding] {
-        T::vertex_attribute_bindings()
-    }
-
-    fn length(&self) -> GLsizeiptr {
-        self.length
-    }
-
-    fn map<'a>(&'a self, range: Range<GLsizeiptr>) -> Box<dyn DynVertexBufferMap> {
-        Box::new(self.map(range))
-    }
-}
-
-impl<T: Sized + Copy> Drop for Buffer<T> {
+impl Drop for Buffer {
     fn drop(&mut self) {
         if self.gl_handle != 0 {
             let deleted_buffers = [self.gl_handle];
@@ -230,7 +215,7 @@ impl<T: Sized + Copy> Drop for Buffer<T> {
     }
 }
 
-impl<T: Sized + Copy> FromIterator<T> for Buffer<T> {
+impl<T: Sized> FromIterator<T> for Buffer {
     fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
         // Make vector from contents of initial_data
         let data = iter.into_iter().collect::<Vec<T>>();

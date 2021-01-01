@@ -5,46 +5,50 @@ use std::rc::Rc;
 
 #[derive(Clone, Debug)]
 pub struct VertexBufferBinding {
-    buffer: Rc<RefCell<Box<dyn DynVertexBuffer>>>,
+    buffer: Rc<RefCell<Buffer>>,
     divisor: GLuint,
+    vertex_attribute_bindings: &'static [VertexAttributeBinding],
 }
 
 impl VertexBufferBinding {
-    pub fn new(buffer: Rc<RefCell<Box<dyn DynVertexBuffer>>>, divisor: GLuint) -> Self {
-        Self { buffer, divisor }
+    pub fn new<T: Vertex>(buffer: Rc<RefCell<Buffer>>, divisor: GLuint) -> Self {
+        let vertex_attribute_bindings = T::vertex_attribute_bindings();
+        Self {
+            buffer,
+            divisor,
+            vertex_attribute_bindings,
+        }
     }
 
-    pub fn buffer(&self) -> &Rc<RefCell<Box<dyn DynVertexBuffer>>> {
+    pub fn buffer(&self) -> &Rc<RefCell<Buffer>> {
         &self.buffer
     }
-}
 
-impl DynVertexBufferBinding for VertexBufferBinding {
-    fn buffer(&self) -> &RefCell<Box<dyn DynVertexBuffer>> {
-        self.buffer.as_ref()
+    pub fn divisor(&self) -> GLuint {
+        self.divisor
     }
 
-    fn divisor(&self) -> GLuint {
-        self.divisor
+    pub fn vertex_attribute_bindings(&self) -> &'static [VertexAttributeBinding] {
+        self.vertex_attribute_bindings
     }
 }
 
 #[derive(Debug)]
 pub struct VertexArray {
     gl_handle: IntHandle,
-    vertex_buffer_bindings: Vec<Box<dyn DynVertexBufferBinding>>,
-    index_buffer: Rc<Buffer<GLuint>>,
+    vertex_buffer_bindings: Vec<VertexBufferBinding>,
+    index_buffer: Rc<Buffer>,
 }
 
 impl VertexArray {
     pub fn new(
-        vertex_buffer_bindings: impl IntoIterator<Item = Box<dyn DynVertexBufferBinding>>,
-        index_buffer: Rc<Buffer<GLuint>>,
+        vertex_buffer_bindings: impl IntoIterator<Item = VertexBufferBinding>,
+        index_buffer: Rc<Buffer>,
     ) -> Self {
         // Collect vertex buffers into a vector
         let vertex_buffer_bindings = vertex_buffer_bindings
             .into_iter()
-            .collect::<Vec<Box<dyn DynVertexBufferBinding>>>();
+            .collect::<Vec<VertexBufferBinding>>();
 
         // We will receive the vertex array's handle in gl_handle
         let mut gl_handle: IntHandle = 0;
@@ -59,7 +63,7 @@ impl VertexArray {
                     binding_idx as GLuint,
                     binding.buffer().borrow().handle(),
                     0,
-                    binding.buffer().borrow().element_size(),
+                    binding.buffer().borrow().element_size() as GLint,
                 );
             }
 
@@ -74,7 +78,7 @@ impl VertexArray {
 
                 // Next we will loop through all of the vertex attribute bindings provided by this binding's vertex buffer
                 let mut offset = 0;
-                for &binding in binding.buffer().borrow().vertex_attribute_bindings().iter() {
+                for &binding in binding.vertex_attribute_bindings().iter() {
                     for add in 0..binding.locations_used() {
                         // Enable this vertex attribute at the next unused location (attribute_idx)
                         gl::EnableVertexArrayAttrib(gl_handle, attribute_idx + add);
@@ -209,11 +213,11 @@ impl VertexArray {
             .min()
     }
 
-    pub fn vertex_buffer_bindings(&self) -> &[Box<dyn DynVertexBufferBinding>] {
+    pub fn vertex_buffer_bindings(&self) -> &[VertexBufferBinding] {
         &self.vertex_buffer_bindings
     }
 
-    pub fn vertex_buffer_bindings_mut(&mut self) -> &mut [Box<dyn DynVertexBufferBinding>] {
+    pub fn vertex_buffer_bindings_mut(&mut self) -> &mut [VertexBufferBinding] {
         &mut self.vertex_buffer_bindings
     }
 }

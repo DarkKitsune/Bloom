@@ -1,7 +1,9 @@
 use crate::*;
 
+pub type TaskFunction = fn(&mut Game, f64, f64);
+
 pub struct TaskSchedule {
-    tasks: Vec<(f64, Box<dyn Fn(&mut Game, f64, f64) + 'static>)>,
+    tasks: Vec<(f64, TaskFunction)>,
 }
 
 impl TaskSchedule {
@@ -9,22 +11,17 @@ impl TaskSchedule {
         Self { tasks: Vec::new() }
     }
 
-    pub fn push(&mut self, time: f64, func: impl Fn(&mut Game, f64, f64) + 'static) {
-        let boxed_func = Box::new(func);
+    pub fn push(&mut self, time: f64, func: TaskFunction) {
         for idx in (0..self.tasks.len()).rev() {
             if self.tasks[idx].0 < time {
-                self.tasks.insert(idx + 1, (time, boxed_func));
+                self.tasks.insert(idx + 1, (time, func));
                 return;
             }
         }
-        self.tasks.insert(0, (time, boxed_func));
+        self.tasks.insert(0, (time, func));
     }
 
-    pub fn push_multiple(
-        &mut self,
-        time: f64,
-        mut funcs: Vec<Box<dyn Fn(&mut Game, f64, f64) + 'static>>,
-    ) {
+    pub fn push_multiple(&mut self, time: f64, mut funcs: Vec<TaskFunction>) {
         for idx in (0..self.tasks.len()).rev() {
             if self.tasks[idx].0 <= time {
                 self.tasks.splice(
@@ -49,5 +46,11 @@ impl TaskSchedule {
             }
         }
         self.tasks = self.tasks.drain(removed..).collect();
+    }
+}
+
+impl Default for TaskSchedule {
+    fn default() -> Self {
+        Self::new()
     }
 }

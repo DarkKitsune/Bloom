@@ -31,18 +31,15 @@ impl SpriteList {
         let texture_size = vector!(*texture.size().x() as f32, *texture.size().y() as f32);
         let (vertex_buffer_binding, index_buffer) = sprite_material.get_vertex_index_buffers();
         sprite_material.set_texture(texture);
-        let instance_buffer_binding = VertexBufferBinding::new(
-            Rc::new(RefCell::new(Box::new(Buffer::<SpriteInstanceVertex>::new(
+        let instance_buffer_binding = VertexBufferBinding::new::<SpriteInstanceVertex>(
+            Rc::new(RefCell::new(Buffer::new::<SpriteInstanceVertex>(
                 max_sprites,
                 false,
                 true,
-            )))),
+            ))),
             1,
         );
-        let vertex_buffer_bindings: Vec<Box<dyn DynVertexBufferBinding>> = vec![
-            Box::new(instance_buffer_binding),
-            Box::new(vertex_buffer_binding),
-        ];
+        let vertex_buffer_bindings = vec![instance_buffer_binding, vertex_buffer_binding];
         let vertex_array = VertexArray::new(vertex_buffer_bindings, index_buffer);
         let sprite_material = Rc::new(RefCell::new(sprite_material));
         let sprite_meshes = vec![Mesh::new(
@@ -139,15 +136,12 @@ impl SpriteList {
                     .buffer()
                     .borrow_mut();
                 {
-                    let mapped = instance_buffer.map(range_changed.clone());
+                    let mut mapped = instance_buffer.map(range_changed.clone());
                     for idx in 0..range_changed.end - range_changed.start {
-                        unsafe {
-                            if let Some(sprite_instance) =
-                                self.sprite_instance((range_changed.start + idx) as usize)
-                            {
-                                *(mapped.add(idx as usize) as *mut SpriteInstanceVertex) =
-                                    *sprite_instance;
-                            }
+                        if let Some(sprite_instance) =
+                            self.sprite_instance((range_changed.start + idx) as usize)
+                        {
+                            mapped[idx as usize] = *sprite_instance;
                         }
                     }
                 }

@@ -10,14 +10,5 @@ pub use material::*;
 mod vertex;
 pub use vertex::*;
 
-mod dyn_vertex_buffer;
-pub use dyn_vertex_buffer::*;
-
-mod dyn_vertex_buffer_map;
-pub use dyn_vertex_buffer_map::*;
-
-mod dyn_vertex_buffer_binding;
-pub use dyn_vertex_buffer_binding::*;
-
 mod scene;
 pub use scene::*;

@@ -4,10 +4,10 @@ use regex::*;
 use std::ffi::{CStr, CString};
 
 const MAX_PROGRAM_INFO_LOG_SIZE: usize = 1024;
-const VERSION_NUMBER: &'static str = "#version 450";
-pub const FEATURE_CAMERA_VIEW_UNIFORM_NAME: &'static str = "_u_view";
-pub const FEATURE_CAMERA_PROJECTION_UNIFORM_NAME: &'static str = "_u_projection";
-pub const FEATURE_TRANSFORM_UNIFORM_NAME: &'static str = "_u_transform";
+const VERSION_NUMBER: &str = "#version 450";
+pub const FEATURE_CAMERA_VIEW_UNIFORM_NAME: &str = "_u_view";
+pub const FEATURE_CAMERA_PROJECTION_UNIFORM_NAME: &str = "_u_projection";
+pub const FEATURE_TRANSFORM_UNIFORM_NAME: &str = "_u_transform";
 
 #[derive(Clone, Copy, Debug, PartialEq, Hash)]
 pub enum ShaderFeature {
@@ -150,6 +150,7 @@ pub enum ShaderDirective {
 }
 
 impl ShaderDirective {
+    #[allow(clippy::match_single_binding)]
     fn from_name(name: impl AsRef<str>) -> Self {
         let name = name.as_ref().trim();
 
@@ -174,11 +175,10 @@ impl ShaderDirective {
                 let mut inserted = String::new();
                 for feature in features {
                     inserted.push_str(&ShaderFeature::from_name(feature).inserted_code());
-                    inserted.push_str("\n");
+                    inserted.push('\n');
                 }
                 Some(inserted)
-            }
-            _ => None,
+            } //_ => None,
         }
     }
 }
@@ -272,7 +272,7 @@ impl ShaderStage {
                 }
             })
             .flatten()
-            .map(|name| ShaderFeature::from_name(name))
+            .map(ShaderFeature::from_name)
             .collect()
     }
 }

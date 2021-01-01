@@ -52,7 +52,7 @@ impl Window {
             //println!("Event: {:?}", event);
             match event {
                 glfw::WindowEvent::Close => self.closed = true,
-                event @ _ => events.push(event),
+                event => events.push(event),
             }
         }
         if self.closed {
