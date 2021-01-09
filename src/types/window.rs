@@ -23,12 +23,7 @@ impl Window {
 
         // Create GLFW window and event receiver for the window
         let (mut glfw_window, event_receiver) = glfw
-            .create_window(
-                *size.x(),
-                *size.y(),
-                title.as_ref(),
-                glfw::WindowMode::Windowed,
-            )
+            .create_window(size[0], size[1], title.as_ref(), glfw::WindowMode::Windowed)
             .expect("Could not create window.");
 
         // Set initial settings
@@ -91,7 +86,7 @@ impl Window {
     }
 
     pub fn aspect_ratio(&self) -> f32 {
-        *self.size.x() as f32 / *self.size.y() as f32
+        self.size[0] as f32 / self.size[1] as f32
     }
 
     pub fn set_title(&mut self, title: impl AsRef<str>) {

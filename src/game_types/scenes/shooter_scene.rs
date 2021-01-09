@@ -2,9 +2,9 @@ use crate::*;
 use fennec_algebra::*;
 use glfw::Key;
 
-const STARTING_FIELD_SIZE: Vec3f = vector!(2.0, 2.0, 2.0);
+const STARTING_FIELD_SIZE: Vec2f = vector!(2.0, 2.0);
 const STARTING_FIELD_VIEWPORT: Vec4f = vector!(0.05, 0.05, 0.75, 0.9);
-const PLAYER_SPAWN_POINT: Vec3f = vector!(0.0, 0.8, 0.0);
+const PLAYER_SPAWN_POINT: Vec2f = vector!(0.0, 0.8);
 
 pub struct ShooterScene {
     playing_field: PlayingField,
@@ -12,12 +12,13 @@ pub struct ShooterScene {
 }
 
 impl ShooterScene {
-    pub fn new() -> Self {
+    pub fn new(current_time: f64) -> Self {
         let playing_field = PlayingField::new(STARTING_FIELD_SIZE, STARTING_FIELD_VIEWPORT);
         let mut player_list = PlayerList::new(1, PLAYER_SPAWN_POINT * playing_field.size() * 0.5);
         player_list.add_player(
-            vector!(0.1 * (32.0 / 48.0), 0.1),
-            vector!(0.0, 0.0, 32.0, 48.0),
+            vector!(0.15, 0.15),
+            vector!(0.0, 0.0, 64.0, 64.0),
+            current_time,
         );
         Self {
             playing_field,
@@ -29,12 +30,12 @@ impl ShooterScene {
 impl Scene for ShooterScene {
     fn event_start(&mut self, _game: &mut Game) {}
 
-    fn event_update(&mut self, game: &mut Game, delta_time: f64, _current_time: f64) {
+    fn event_update(&mut self, game: &mut Game, delta_time: f64, current_time: f64) {
         // Update player
-        self.player_list.update(game, delta_time);
+        self.player_list.update(game, delta_time, current_time);
     }
 
-    fn event_draw(&mut self, game: &mut Game, _delta_time: f64, _current_time: f64) {
+    fn event_draw(&mut self, game: &mut Game, delta_time: f64, _current_time: f64) {
         let window_size = game.window().size();
 
         // Clear buffer
@@ -45,7 +46,7 @@ impl Scene for ShooterScene {
         /*
         // Set viewport for background
         game.gfx_mut().viewport(
-            vector!(0, 0, *window_size.x() as i32, *window_size.y() as i32,),
+            vector!(0, 0, window_size[0] as i32, window_size[1] as i32,),
             true,
         );*/
 
@@ -72,14 +73,8 @@ impl Scene for ShooterScene {
         ));
 
         // Draw player
-        self.player_list.draw(game.gfx_mut());
+        self.player_list.draw(game.gfx_mut(), delta_time);
     }
 
-    fn event_key(&mut self, _game: &mut Game, _key: Key, _pressed: bool) {}
-}
-
-impl Default for ShooterScene {
-    fn default() -> Self {
-        Self::new()
-    }
+    fn event_key(&mut self, _game: &mut Game, key: Key, pressed: bool, current_time: f64) {}
 }

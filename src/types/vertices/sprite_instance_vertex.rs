@@ -1,30 +1,45 @@
 use crate::*;
 use fennec_algebra::*;
 
-const VERTEX_ATTRIBUTE_BINDINGS: [VertexAttributeBinding; 4] = [
-    VertexAttributeBinding::Float2,
-    VertexAttributeBinding::Float2,
-    VertexAttributeBinding::Float4,
+const VERTEX_ATTRIBUTE_BINDINGS: [VertexAttributeBinding; 2] = [
+    VertexAttributeBinding::Mat4f,
     VertexAttributeBinding::Float4,
 ];
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct SpriteInstanceVertex {
-    position: Vec2f,
-    scale: Vec2f,
-    rotation: Quaternion,
+    transform: Mat4f,
     rectangle: Vec4f,
 }
 
 impl SpriteInstanceVertex {
-    pub fn new(position: Vec2f, scale: Vec2f, rotation: Quaternion, rectangle: Vec4f) -> Self {
+    pub fn new(rectangle: Vec4f) -> Self {
         Self {
-            position,
-            scale,
-            rotation,
+            transform: Mat4f::identity(),
             rectangle,
         }
+    }
+
+    pub fn with_position(mut self, position: Vec3f) -> Self {
+        self.transform.set_position(position);
+        self
+    }
+
+    pub fn with_scale(mut self, scale: Vec3f) -> Self {
+        self.transform
+            .set_scale(self.transform.scale().unwrap() * scale);
+        self
+    }
+
+    pub fn with_rotation(mut self, rotation: Quaternion) -> Self {
+        self.transform = Mat4f::new_rotation(&rotation).unwrap() * self.transform;
+        self
+    }
+
+    pub fn with_rectangle(mut self, rectangle: Vec4f) -> Self {
+        self.rectangle = rectangle;
+        self
     }
 }
 

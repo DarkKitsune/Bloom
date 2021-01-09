@@ -8,12 +8,16 @@ const VERSION_NUMBER: &str = "#version 450";
 pub const FEATURE_CAMERA_VIEW_UNIFORM_NAME: &str = "_u_view";
 pub const FEATURE_CAMERA_PROJECTION_UNIFORM_NAME: &str = "_u_projection";
 pub const FEATURE_TRANSFORM_UNIFORM_NAME: &str = "_u_transform";
+pub const FEATURE_BATCH_UNIFORM_NAME: &str = "_u_batchOffset";
+pub const FEATURE_DELTA_TIME_UNIFORM_NAME: &str = "_u_deltaTime";
 
 #[derive(Clone, Copy, Debug, PartialEq, Hash)]
 pub enum ShaderFeature {
     Camera,
     Transform,
     Noise,
+    Batch,
+    DeltaTime,
 }
 
 impl ShaderFeature {
@@ -23,6 +27,8 @@ impl ShaderFeature {
             "camera" => ShaderFeature::Camera,
             "transform" => ShaderFeature::Transform,
             "noise" => ShaderFeature::Noise,
+            "batch" => ShaderFeature::Batch,
+            "deltaTime" => ShaderFeature::DeltaTime,
             _ => panic!("Unknown shader feature {:?}", name),
         }
     }
@@ -140,6 +146,22 @@ float sampleNoise(vec3 sample_pos, float seed, float scale, int iterations) {{
     return sigmoid(sum / divider);
 }}",
             ),
+            ShaderFeature::Batch => format!(
+                "
+uniform uint {0};
+uint batchOffset() {{
+    return {0};
+}}",
+                FEATURE_BATCH_UNIFORM_NAME,
+            ),
+            ShaderFeature::DeltaTime => format!(
+                "
+uniform float {0};
+float deltaTime() {{
+    return {0};
+}}",
+                FEATURE_DELTA_TIME_UNIFORM_NAME,
+            ),
         }
     }
 }
@@ -185,6 +207,7 @@ impl ShaderDirective {
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub enum ShaderStage {
+    Compute,
     Vertex,
     Fragment,
 }
@@ -192,6 +215,7 @@ pub enum ShaderStage {
 impl ShaderStage {
     pub fn gl_enum(&self) -> GLenum {
         match self {
+            ShaderStage::Compute => gl::COMPUTE_SHADER,
             ShaderStage::Vertex => gl::VERTEX_SHADER,
             ShaderStage::Fragment => gl::FRAGMENT_SHADER,
         }
@@ -199,6 +223,7 @@ impl ShaderStage {
 
     pub fn stage_bit(&self) -> GLenum {
         match self {
+            ShaderStage::Compute => gl::COMPUTE_SHADER_BIT,
             ShaderStage::Vertex => gl::VERTEX_SHADER_BIT,
             ShaderStage::Fragment => gl::FRAGMENT_SHADER_BIT,
         }
@@ -350,6 +375,10 @@ impl Program {
         }
     }
 
+    pub fn set_uniform_uint(&self, location: GLuint, unit: GLuint) {
+        unsafe { gl::ProgramUniform1ui(self.handle(), location as GLint, unit) };
+    }
+
     pub fn set_uniform_mat4f(&self, location: GLuint, mats: &[Mat4f]) {
         unsafe {
             gl::ProgramUniformMatrix4fv(
@@ -364,6 +393,10 @@ impl Program {
 
     pub fn set_uniform_texture_unit(&self, location: GLuint, unit: GLuint) {
         unsafe { gl::ProgramUniform1i(self.handle(), location as GLint, unit as GLint) };
+    }
+
+    pub fn set_uniform_f(&self, location: GLuint, f: f32) {
+        unsafe { gl::ProgramUniform1f(self.handle(), location as GLint, f) };
     }
 
     pub fn shader_features(&self) -> &[ShaderFeature] {

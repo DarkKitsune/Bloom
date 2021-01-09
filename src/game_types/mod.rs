@@ -10,9 +10,6 @@ pub use scenes::*;
 mod vertices;
 pub use vertices::*;
 
-mod physics_object_base;
-pub use physics_object_base::*;
-
 mod player;
 pub use player::*;
 

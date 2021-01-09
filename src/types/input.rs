@@ -3,14 +3,14 @@ use fennec_algebra::*;
 use glfw::Key;
 use std::ops::Sub;
 
-pub const INPUT_ACCELERATE: usize = 0;
-pub const INPUT_DECELERATE: usize = 1;
-pub const INPUT_ROLL_LEFT: usize = 2;
-pub const INPUT_ROLL_RIGHT: usize = 3;
-pub const INPUT_YAW_LEFT: usize = 4;
-pub const INPUT_YAW_RIGHT: usize = 5;
-pub const INPUT_PITCH_UP: usize = 6;
-pub const INPUT_PITCH_DOWN: usize = 7;
+pub const INPUT_LEFT: usize = 0;
+pub const INPUT_RIGHT: usize = 1;
+pub const INPUT_UP: usize = 2;
+pub const INPUT_DOWN: usize = 3;
+pub const INPUT_SHOOT1: usize = 4;
+pub const INPUT_SHOOT2: usize = 5;
+pub const INPUT_BOMB: usize = 6;
+pub const INPUT_SLOW: usize = 7;
 pub const INPUT_SPEED_SCALE_UP: usize = 8;
 pub const INPUT_SPEED_SCALE_DOWN: usize = 9;
 pub const INPUT_LAND: usize = 10;
@@ -31,17 +31,17 @@ impl Input {
     }
 
     pub fn use_default_key_bindings(&mut self) {
-        self.bind_key(INPUT_ACCELERATE, Some(Key::W));
-        self.bind_key(INPUT_DECELERATE, Some(Key::S));
-        self.bind_key(INPUT_ROLL_LEFT, Some(Key::U));
-        self.bind_key(INPUT_ROLL_RIGHT, Some(Key::O));
-        self.bind_key(INPUT_YAW_LEFT, Some(Key::J));
-        self.bind_key(INPUT_YAW_RIGHT, Some(Key::L));
-        self.bind_key(INPUT_PITCH_UP, Some(Key::K));
-        self.bind_key(INPUT_PITCH_DOWN, Some(Key::I));
-        self.bind_key(INPUT_SPEED_SCALE_UP, Some(Key::LeftShift));
-        self.bind_key(INPUT_SPEED_SCALE_DOWN, Some(Key::LeftControl));
-        self.bind_key(INPUT_LAND, Some(Key::Space));
+        self.bind_key(INPUT_LEFT, Some(Key::Left));
+        self.bind_key(INPUT_RIGHT, Some(Key::Right));
+        self.bind_key(INPUT_UP, Some(Key::Up));
+        self.bind_key(INPUT_DOWN, Some(Key::Down));
+        self.bind_key(INPUT_SHOOT1, Some(Key::Z));
+        self.bind_key(INPUT_SHOOT2, Some(Key::X));
+        self.bind_key(INPUT_BOMB, Some(Key::C));
+        self.bind_key(INPUT_SLOW, Some(Key::LeftShift));
+        self.bind_key(INPUT_SPEED_SCALE_UP, Some(Key::Num1));
+        self.bind_key(INPUT_SPEED_SCALE_DOWN, Some(Key::Num2));
+        self.bind_key(INPUT_LAND, Some(Key::Num3));
     }
 
     pub fn set_state(&mut self, idx: usize, state: bool) {

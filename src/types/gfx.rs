@@ -2,6 +2,7 @@ use crate::*;
 use fennec_algebra::*;
 use std::cell::RefCell;
 use std::ffi::{c_void, CString};
+use std::ops::Range;
 
 //const MAX_DEBUG_MESSAGES: usize = 10;
 //const MAX_DEBUG_MESSAGES_SIZE: usize = MAX_DEBUG_MESSAGES * 256;
@@ -308,6 +309,45 @@ impl GFX {
         }
     }
 
+    pub fn dispatch_compute_1d(
+        &mut self,
+        mut compute_pipeline: impl std::ops::DerefMut<Target = ComputePipeline>,
+        storage_buffers: &[impl std::ops::Deref<Target = Buffer>],
+        range: Range<GLuint>,
+        batch_size: GLuint,
+    ) {
+        for (idx, buffer) in storage_buffers.into_iter().enumerate() {
+            unsafe {
+                gl::BindBufferBase(gl::SHADER_STORAGE_BUFFER, idx as GLuint, buffer.handle());
+            }
+        }
+
+        unsafe {
+            gl::BindProgramPipeline(compute_pipeline.handle());
+        }
+        let batch_offset_location = compute_pipeline
+            .program()
+            .uniform_location(FEATURE_BATCH_UNIFORM_NAME);
+
+        for batch_offset in range.clone().step_by(batch_size as usize) {
+            if let Some(batch_offset_location) = batch_offset_location {
+                compute_pipeline
+                    .program_mut()
+                    .set_uniform_uint(batch_offset_location, batch_offset);
+            }
+            let this_batch_size = batch_size.min(range.end - batch_offset);
+            unsafe {
+                gl::DispatchCompute(this_batch_size, 1, 1);
+            }
+        }
+
+        for (idx, _) in storage_buffers.into_iter().enumerate() {
+            unsafe {
+                gl::BindBufferBase(gl::SHADER_STORAGE_BUFFER, idx as GLuint, 0);
+            }
+        }
+    }
+
     /*pub fn poll_debug_messages(&self) {
         let mut sources: [GLenum; MAX_DEBUG_MESSAGES] = [0; MAX_DEBUG_MESSAGES];
         let mut types: [GLenum; MAX_DEBUG_MESSAGES] = [0; MAX_DEBUG_MESSAGES];
@@ -324,9 +364,9 @@ impl GFX {
     }*/
 
     pub fn viewport(&mut self, viewport: Vec4i, set_scissor: bool) {
-        unsafe { gl::Viewport(*viewport.x(), *viewport.y(), *viewport.z(), *viewport.w()) };
+        unsafe { gl::Viewport(viewport[0], viewport[1], viewport[2], viewport[3]) };
         if set_scissor {
-            unsafe { gl::Scissor(*viewport.x(), *viewport.y(), *viewport.z(), *viewport.w()) };
+            unsafe { gl::Scissor(viewport[0], viewport[1], viewport[2], viewport[3]) };
         }
     }
 }

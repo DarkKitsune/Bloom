@@ -5,12 +5,10 @@ use std::rc::Rc;
 
 const VERTEX_SHADER: &str = "
 #[feature(camera)]
-layout(location = 0) in vec2 i_position;
-layout(location = 1) in vec2 i_scale;
-layout(location = 2) in vec4 i_rotation;
-layout(location = 3) in vec4 i_rectangle;
-layout(location = 4) in vec2 v_position;
-layout(location = 5) in vec2 v_texCoord;
+layout(location = 0) in mat4 i_matrix;
+layout(location = 4) in vec4 i_rectangle;
+layout(location = 5) in vec2 v_position;
+layout(location = 6) in vec2 v_texCoord;
 
 layout(location = 0) out vec2 f_texCoord;
 layout(location = 1) out vec4 f_rectangle;
@@ -21,12 +19,6 @@ void main()
 {
     f_texCoord = v_texCoord;
     f_rectangle = i_rectangle;
-    mat4 i_matrix = mat4(
-        vec4(i_scale.x, 0.0, 0.0, 0.0),
-        vec4(0.0, i_scale.y, 0.0, 0.0),
-        vec4(0.0, 0.0, 1.0, 0.0),
-        vec4(i_position, 0.0, 1.0)
-    );
     gl_Position = applyProjection(applyView(i_matrix * vec4(v_position, 0.0, 1.0)));
 }";
 
@@ -50,6 +42,8 @@ pub struct SpriteMaterial {
     texture: Option<Rc<Texture<{ TextureType::Texture2D }>>>,
     vertex_buffer: VertexBufferBinding,
     index_buffer: Rc<Buffer>,
+    instance_input_buffer: Option<Rc<RefCell<Buffer>>>,
+    vertex_instance_buffer: Option<Rc<Buffer>>,
 }
 
 impl SpriteMaterial {
@@ -79,6 +73,8 @@ impl SpriteMaterial {
             texture: None,
             vertex_buffer,
             index_buffer,
+            instance_input_buffer: None,
+            vertex_instance_buffer: None,
         }
     }
 
@@ -103,9 +99,7 @@ impl Material for SpriteMaterial {
     fn vertex_attribute_bindings(&self) -> Vec<Vec<VertexAttributeBinding>> {
         vec![
             vec![
-                VertexAttributeBinding::Float2,
-                VertexAttributeBinding::Float2,
-                VertexAttributeBinding::Float4,
+                VertexAttributeBinding::Mat4f,
                 VertexAttributeBinding::Float4,
             ],
             vec![
@@ -116,13 +110,15 @@ impl Material for SpriteMaterial {
     }
 
     fn _on_bind(&self) {
-        let frag_program = self.pipeline().fragment_program();
-        let texture_location = frag_program.uniform_location("u_texture");
-        if let Some(texture_location) = texture_location {
-            frag_program.set_uniform_texture_unit(texture_location, 0);
-            unsafe {
-                gl::BindTextureUnit(0, self.texture.as_ref().expect("Texture not set").handle())
-            };
+        {
+            let frag_program = self.pipeline().fragment_program();
+            let frag_texture_location = frag_program.uniform_location("u_texture");
+            if let Some(frag_texture_location) = frag_texture_location {
+                frag_program.set_uniform_texture_unit(frag_texture_location, 0);
+                unsafe {
+                    gl::BindTextureUnit(0, self.texture.as_ref().expect("Texture not set").handle())
+                };
+            }
         }
     }
 }

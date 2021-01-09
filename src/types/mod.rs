@@ -31,6 +31,9 @@ pub use program::*;
 mod pipeline;
 pub use pipeline::*;
 
+mod compute_pipeline;
+pub use compute_pipeline::*;
+
 mod mesh;
 pub use mesh::*;
 
@@ -45,3 +48,9 @@ pub use input::*;
 
 mod sprite_list;
 pub use sprite_list::*;
+
+mod sprite_animator;
+pub use sprite_animator::*;
+
+mod sprite_object;
+pub use sprite_object::*;

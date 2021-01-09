@@ -51,7 +51,7 @@ impl Game {
             previous_frame_instant: start_instant,
             smoothed_framerate: 0.0,
             task_schedule: Some(task_schedule),
-            current_scene: Some(Box::new(ShooterScene::new())),
+            current_scene: Some(Box::new(ShooterScene::new(0.0))),
         };
 
         // Start the update loop
@@ -62,6 +62,15 @@ impl Game {
         loop {
             // Copy all input states to previous states
             self.input.copy_state_to_previous();
+
+            // Get the current time and compute delta time (the time passed since the previous frame)
+            let now = Instant::now();
+            let current_time = now.duration_since(self.start_instant).as_secs_f64();
+            let delta_time = now
+                .duration_since(self.previous_frame_instant)
+                .as_secs_f64()
+                .max(0.00001);
+            self.previous_frame_instant = now;
 
             // Poll GLFW events
             Window::poll_events(&mut self.glfw);
@@ -76,14 +85,14 @@ impl Game {
                             self.input.set_key_state(key, true);
                             let mut scene = None;
                             std::mem::swap(&mut self.current_scene, &mut scene);
-                            scene.as_mut().unwrap().event_key(self, key, true);
+                            scene.as_mut().unwrap().event_key(self, key, true, current_time);
                             std::mem::swap(&mut self.current_scene, &mut scene);
                         }
                         glfw::Action::Release => {
                             self.input.set_key_state(key, false);
                             let mut scene = None;
                             std::mem::swap(&mut self.current_scene, &mut scene);
-                            scene.as_mut().unwrap().event_key(self, key, false);
+                            scene.as_mut().unwrap().event_key(self, key, false, current_time);
                             std::mem::swap(&mut self.current_scene, &mut scene);
                         }
                         _ => (),
@@ -96,15 +105,6 @@ impl Game {
             if self.window.is_closed() {
                 break;
             }
-
-            // Get the current time and compute delta time (the time passed since the previous frame)
-            let now = Instant::now();
-            let current_time = now.duration_since(self.start_instant).as_secs_f64();
-            let delta_time = now
-                .duration_since(self.previous_frame_instant)
-                .as_secs_f64()
-                .max(0.00001);
-            self.previous_frame_instant = now;
 
             // Calculate the smoothed framerate
             self.smoothed_framerate = (self.smoothed_framerate
